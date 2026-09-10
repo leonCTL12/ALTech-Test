@@ -69,3 +69,6 @@ build/
 *~
 
 .refact
+
+# --- Local H2 database files (created on first run) ---
+data/
