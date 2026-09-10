@@ -67,3 +67,5 @@ build/
 *.swp
 *.swo
 *~
+
+.refact
