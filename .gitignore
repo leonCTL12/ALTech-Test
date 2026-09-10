@@ -1,0 +1,69 @@
+# --- Private / confidential (NEVER committed) ---
+# LLM-readable context for this author only; hidden from GitHub.
+.context/
+
+# The original assignment is marked CONFIDENTIAL — do not push it.
+AI_Engineer_Takehome.pdf
+
+# --- Java / JVM build output ---
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+replay_pid*
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# --- Maven wrapper ---
+.mvn/wrapper/maven-wrapper.jar
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Environment / secrets ---
+.env
+.env.*
+application-local.yml
+application-local.properties
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- IDE / editors ---
+### IntelliJ IDEA ###
+.idea/
+*.iml
+*.iws
+*.ipr
+
+### VS Code ###
+.vscode/
+
+### STS / Eclipse ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### Editor cruft ###
+*.swp
+*.swo
+*~
