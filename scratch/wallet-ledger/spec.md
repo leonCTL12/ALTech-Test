@@ -15,8 +15,8 @@ Balance change appends an immutable Ledger Entry and updates the Wallet's materi
 database transaction. Idempotency is enforced by a client-supplied Idempotency Key under a database UNIQUE
 constraint, so a Duplicate Submission is detected by the database itself and the original result returned.
 A Debit is rejected by the Overdraft Guard when it would make the Balance negative. A Refund is a one-shot
-Credit that reverses a prior Debit. Wallets are created lazily on first Credit. Errors are returned as a
-structured body from a global exception handler. The schema is managed by Flyway and runs on H2 by default
+Credit that reverses a prior Debit. A Player and its Wallet are created together by a dedicated endpoint.
+Errors are returned as a structured body from a global exception handler. The schema is managed by Flyway and runs on H2 by default
 with PostgreSQL as a drop-in profile.
 
 ## User Stories
@@ -31,8 +31,10 @@ with PostgreSQL as a drop-in profile.
 8. As a player, I want a refund to be refused if the debit was already refunded, so that I cannot reverse the same debit twice.
 9. As an operator, I want a request carrying a repeated idempotency key to be ignored, so that a retry after a network failure does not double-charge.
 10. As an operator, I want a repeated request to return the original result, so that retries are transparent to the caller.
-11. As an operator, I want a wallet created lazily on first credit, so that a player who never topped up simply has no wallet.
-12. As an operator, I want a debit or refund to a player with no wallet to return 404, so that missing players are handled clearly.
+11. As an operator, I want to create a player together with its wallet in one call, so that the service is
+    self-contained and demoable without touching the database.
+12. As an operator, I want any wallet operation for an unknown player to return 404, so that missing players
+    are handled clearly.
 13. As an operator, I want invalid inputs (negative amounts, missing fields) rejected with a clear error, so that bad requests fail fast.
 14. As an operator, I want a structured error body with a machine-readable code, so that clients can handle failures programmatically.
 15. As an operator, I want two concurrent debits to leave the wallet correct and never negative, so that the wallet is safe under load.
@@ -53,19 +55,22 @@ with PostgreSQL as a drop-in profile.
   inserts one immutable Ledger Entry and updates the Wallet's Balance column in the same transaction.
 - **Money as `long` Minor Units** (ADR-0002). API accepts/returns decimal strings; conversion happens only
   at the boundary. No `BigDecimal` or floating point in the domain.
-- **Single currency per Wallet** (from grilling). A Wallet has a `currency` field; all entries are in that
-  currency. No FX.
+- **Single currency: USD throughout** (grilling decision revisited). The whole system is USD; amounts are
+  US cents. No currency field, no FX, no conversion. (Multi-currency wallets and FX are explicitly out of
+  scope — see Out of Scope.)
 
 ### API contract
 
-- `POST /players/{playerId}/wallet/credit` — body: `{ amount, currency, requestId, reason }`
-- `POST /players/{playerId}/wallet/debit` — body: `{ amount, currency, requestId, reason }`
-- `POST /players/{playerId}/wallet/refund` — body: `{ amount, currency, requestId, reason, originalDebitId }`
+- `POST /players` — body: `{}` (empty) — creates a Player and its Wallet (0 balance, USD) in one
+  transaction; returns the generated `playerId`. No Idempotency Key: it is not a money movement.
+- `POST /players/{playerId}/wallet/credit` — body: `{ amount, requestId, reason }`
+- `POST /players/{playerId}/wallet/debit` — body: `{ amount, requestId, reason }`
+- `POST /players/{playerId}/wallet/refund` — body: `{ amount, requestId, reason, originalDebitId }`
 - `GET /players/{playerId}/wallet` — returns current Balance
 - `GET /players/{playerId}/wallet/transactions?after=<entryId>&limit=<n>` — cursor-paginated history,
   newest first
-- `amount` is a decimal string (e.g. `"10.00"`) converted to Minor Units at the boundary; must be a
-  positive whole number of minor units after conversion.
+- `amount` is a decimal string (e.g. `"10.00"`) converted to US cents at the boundary; must be a positive
+  whole number of cents after conversion.
 - `requestId` is a client-supplied UUID (the Idempotency Key).
 - `reason` is structured: a `reasonKind` enum (`MISSION_REWARD`, `PURCHASE`, `ADMIN`, `REFUND`), a
   human `description`, and an optional `referenceId`. Refund uses `referenceId` to point at the original
@@ -90,17 +95,20 @@ with PostgreSQL as a drop-in profile.
   `originalDebitId` plus an application check.
 - A Refund is a **Credit**: it always succeeds and is never subject to the Overdraft Guard.
 
-### Wallet lifecycle
+### Player & wallet lifecycle
 
-- **Lazy creation on first Credit** (ADR-0005), atomic "insert wallet if absent" so concurrent first
-  credits cannot create two Wallets.
-- **Debit/Refund to a player with no Wallet → 404.**
-- **Missing player → 404.**
+- **Player and Wallet are created together** by `POST /players` in one transaction (ADR-0005). A player
+  always has exactly one Wallet, starting at 0 balance. No lazy creation: the earlier "insert wallet if
+  absent" race on first Credit is gone because the Wallet exists before any money movement.
+- **Wallet operations for an unknown player → 404.** (The no-Wallet case is unreachable through the API
+  since the Wallet is created with the Player.)
+- **Known divergence from a real deployment:** in production a player would already exist in an external
+  identity system; the repo owns player creation so the service is self-contained and demoable.
 
 ### Error contract
 
 - Global `@RestControllerAdvice` returning `{ "code": "...", "message": "...", "field": "..." }`.
-- Statuses: `400` invalid input, `404` missing player/wallet/debit, `409` insufficient balance or
+- Statuses: `400` invalid input, `404` missing player/debit, `409` insufficient balance or
   already-refunded debit. Duplicate Submission returns `200` with the original result.
 
 ### Database
@@ -108,7 +116,7 @@ with PostgreSQL as a drop-in profile.
 - **Flyway migrations** for the schema (portable SQL).
 - **H2 by default** (in-memory for tests, file or in-memory for run); **PostgreSQL profile** as a drop-in
   (ADR not needed — same SQL).
-- Schema: `player` (id), `wallet` (id, player_id, currency, balance, version), `ledger_entry`
+- Schema: `player` (id), `wallet` (id, player_id, balance, version), `ledger_entry`
   (id, wallet_id, amount, direction, reason_kind, description, reference_id, request_id UNIQUE,
   original_debit_id UNIQUE NULL, created_at).
 
@@ -137,7 +145,7 @@ with PostgreSQL as a drop-in profile.
   - Two concurrent identical requests apply once (thread pool through the API seam).
   - Two concurrent debits leave the final Balance correct and never negative.
   - Refund restores the amount, is refused a second time (409), and is not subject to the overdraft guard.
-  - Wallet is created lazily on first Credit; Debit/Refund to a missing Wallet is 404.
+  - `POST /players` creates a Player + Wallet; wallet operations for an unknown player return 404.
   - Invalid inputs (negative amount, missing requestId) return 400.
   - Transaction history pages via cursor with stable ordering.
 - **Prior art:** none yet — this is the first test suite in the repo. The existing
@@ -147,7 +155,7 @@ with PostgreSQL as a drop-in profile.
 
 - Redis caching for `getBalance` (explicitly deferred).
 - k6 / standalone load-test harness.
-- Multi-currency wallets and FX.
+- Multi-currency wallets, FX, and any currency field — the system is USD-only.
 - Daily login streak, promotional rewards, player-to-player transfers, reservations, bulk reward
   distribution, claim reward.
 - Domain events / event publishing.
