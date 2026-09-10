@@ -21,18 +21,15 @@ This repo uses local files that are **not committed to GitHub**. Read them befor
 
 ### Issue tracker
 
-Issues and specs live as markdown under `.scratch/<feature-slug>/` and **are committed to GitHub**
-so reviewers can see how the work is divided. One feature per directory; one file per ticket at
-`.scratch/<feature-slug>/issues/NN-<slug>.md`. See `docs/agents/issue-tracker.md`.
+Issues and specs live as markdown under `scratch/<feature-slug>/`. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
-Open issues carry a `Status:` line using the canonical roles. See `docs/agents/triage-labels.md`.
+Five canonical roles: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
 
 ### Domain docs
 
-Single-context repo: `CONTEXT.md` at the root plus `docs/adr/` for decisions (created lazily when
-domain terms or ADRs actually get resolved). Use the vocabulary defined there.
+Single-context: one `CONTEXT.md` at the root plus `docs/adr/` for decisions. See `docs/agents/domain.md`.
 
 ## Working conventions
 
