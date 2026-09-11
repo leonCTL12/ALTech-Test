@@ -32,25 +32,43 @@ public class WalletController {
 
 	@PostMapping("/credit")
 	public BalanceResponse credit(@PathVariable long playerId, @RequestBody AmountRequest request) {
-		ChangeRequest change = parse(playerId, request);
+		ChangeRequest change = parse(playerId, request.amount(), request.requestId(), request.reason());
 		return new BalanceResponse(walletService.credit(playerId, change.amount(), change.reason(), change.requestId()));
 	}
 
 	@PostMapping("/debit")
 	public BalanceResponse debit(@PathVariable long playerId, @RequestBody AmountRequest request) {
-		ChangeRequest change = parse(playerId, request);
+		ChangeRequest change = parse(playerId, request.amount(), request.requestId(), request.reason());
 		return new BalanceResponse(walletService.debit(playerId, change.amount(), change.reason(), change.requestId()));
 	}
 
-	private ChangeRequest parse(long playerId, AmountRequest request) {
+	@PostMapping("/refund")
+	public BalanceResponse refund(@PathVariable long playerId, @RequestBody RefundRequest request) {
+		ChangeRequest change = parse(playerId, request.amount(), request.requestId(), request.reason());
+		requireOriginalDebitId(request.originalDebitId());
+		return new BalanceResponse(walletService.refund(playerId, change.amount(), change.reason(),
+				change.requestId(), request.originalDebitId()));
+	}
+
+	private void requireOriginalDebitId(Long originalDebitId) {
+		if (originalDebitId == null) {
+			throw new ApiException(HttpStatus.BAD_REQUEST, "missing_field",
+					"The field 'originalDebitId' is required.", "originalDebitId");
+		}
+		if (originalDebitId <= 0) {
+			throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_original_debit_id",
+					"originalDebitId must be a positive whole number.", "originalDebitId");
+		}
+	}
+
+	private ChangeRequest parse(long playerId, String amount, String requestId, ReasonInput reason) {
 		requirePlayerId(playerId);
-		require(request.amount(), "amount");
-		require(request.requestId(), "requestId");
-		requireReason(request.reason());
-		MinorUnits amount = toMinorUnits(request.amount());
-		Reason reason = new Reason(request.reason().kind(), request.reason().description(),
-				request.reason().referenceId());
-		return new ChangeRequest(amount, reason, request.requestId().trim());
+		require(amount, "amount");
+		require(requestId, "requestId");
+		requireReason(reason);
+		MinorUnits minor = toMinorUnits(amount);
+		Reason r = new Reason(reason.kind(), reason.description(), reason.referenceId());
+		return new ChangeRequest(minor, r, requestId.trim());
 	}
 
 	private record ChangeRequest(MinorUnits amount, Reason reason, String requestId) {
@@ -91,6 +109,9 @@ public class WalletController {
 	}
 
 	public record AmountRequest(String amount, String requestId, ReasonInput reason) {
+	}
+
+	public record RefundRequest(String amount, String requestId, ReasonInput reason, Long originalDebitId) {
 	}
 
 	public record ReasonInput(@JsonProperty("reasonKind") ReasonKind kind, String description, Long referenceId) {

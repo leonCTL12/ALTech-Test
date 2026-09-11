@@ -44,6 +44,29 @@ public class WalletService {
 		return MinorUnits.format(wallet.debit(amount.value()));
 	}
 
+	@Transactional
+	public String refund(long playerId, MinorUnits amount, Reason reason, String requestId, Long originalDebitId) {
+		Wallet wallet = walletOrThrow(wallets.findByPlayerIdForUpdate(playerId), playerId);
+
+		if (ledgerEntries.findByRequestId(requestId).isPresent()) {
+			return MinorUnits.format(wallet.getBalance());
+		}
+		if (ledgerEntries.findByOriginalDebitId(originalDebitId).isPresent()) {
+			throw new ApiException(HttpStatus.CONFLICT, "already_refunded",
+					"The debit with id " + originalDebitId + " has already been refunded.");
+		}
+		LedgerEntry originalDebit = ledgerEntries.findById(originalDebitId).orElseThrow(() ->
+				new ApiException(HttpStatus.NOT_FOUND, "debit_not_found",
+						"No debit with id " + originalDebitId + " exists."));
+		if (originalDebit.getDirection() != Direction.DEBIT) {
+			throw new ApiException(HttpStatus.NOT_FOUND, "debit_not_found",
+					"Ledger entry " + originalDebitId + " is not a debit.");
+		}
+
+		ledgerEntries.save(new LedgerEntry(wallet, amount.value(), Direction.CREDIT, reason, requestId, originalDebitId));
+		return MinorUnits.format(wallet.credit(amount.value()));
+	}
+
 	public String getBalance(long playerId) {
 		Wallet wallet = walletOrThrow(wallets.findByPlayerId(playerId), playerId);
 		return MinorUnits.format(wallet.getBalance());
