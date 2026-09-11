@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -21,6 +22,12 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(HttpMessageNotReadableException.class)
 	public ResponseEntity<ErrorResponse> handleMalformedBody(HttpMessageNotReadableException ex) {
 		return toResponse(ApiException.malformedJson());
+	}
+
+	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
+	public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+		return toResponse(new ApiException(HttpStatus.BAD_REQUEST, "invalid_path",
+				"Path parameter '" + ex.getName() + "' must be a whole number.", ex.getName()));
 	}
 
 	@ExceptionHandler(Exception.class)

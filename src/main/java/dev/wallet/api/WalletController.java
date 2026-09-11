@@ -2,12 +2,19 @@ package dev.wallet.api;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import dev.wallet.api.error.ApiException;
+import dev.wallet.api.error.ErrorResponse;
 import dev.wallet.domain.LedgerEntry;
 import dev.wallet.domain.MinorUnits;
 import dev.wallet.domain.Reason;
 import dev.wallet.domain.ReasonKind;
 import dev.wallet.service.WalletService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,14 +40,33 @@ public class WalletController {
 	}
 
 	@GetMapping
+	@Operation(summary = "Get a player's wallet balance",
+			description = "Returns the current balance of the player's wallet as a decimal string.")
+	@ApiResponse(responseCode = "200", description = "The current balance",
+			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = BalanceResponse.class)))
+	@ApiResponse(responseCode = "400", description = "playerId is not a positive whole number (code: invalid_path)",
+			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "404", description = "No player with the given id exists (code: player_not_found)",
+			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
 	public BalanceResponse getBalance(@PathVariable long playerId) {
 		requirePlayerId(playerId);
 		return new BalanceResponse(walletService.getBalance(playerId));
 	}
 
 	@GetMapping("/transactions")
+	@Operation(summary = "Get a player's ledger entry history",
+			description = "Returns the ledger entries of the player's wallet, newest first, using cursor pagination. "
+					+ "Omit after to start from the newest entry; limit caps the page size.")
+	@ApiResponse(responseCode = "200", description = "A page of ledger entries and the cursor for the next page",
+			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = LedgerHistoryResponse.class)))
+	@ApiResponse(responseCode = "400", description = "playerId, after or limit is invalid (codes: invalid_path, invalid_cursor, invalid_limit)",
+			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "404", description = "No player with the given id exists (code: player_not_found)",
+			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
 	public LedgerHistoryResponse transactions(@PathVariable long playerId,
+			@Parameter(description = "Ledger entry id to continue from; entries newer than this are omitted")
 			@RequestParam(required = false) String after,
+			@Parameter(description = "Maximum number of entries to return, between 1 and " + MAX_LIMIT)
 			@RequestParam(required = false) String limit) {
 		requirePlayerId(playerId);
 		WalletService.LedgerHistory history =
@@ -49,18 +75,51 @@ public class WalletController {
 	}
 
 	@PostMapping("/credit")
+	@Operation(summary = "Credit a player's wallet",
+			description = "Increases the wallet balance by the given amount and appends a credit ledger entry. "
+					+ "Retrying with the same requestId applies the credit only once.")
+	@ApiResponse(responseCode = "200", description = "The balance after the credit",
+			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = BalanceResponse.class)))
+	@ApiResponse(responseCode = "400", description = "A field is missing or invalid (codes: missing_field, invalid_amount, malformed_body)",
+			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "404", description = "No player with the given id exists (code: player_not_found)",
+			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
 	public BalanceResponse credit(@PathVariable long playerId, @RequestBody AmountRequest request) {
 		ChangeRequest change = parse(playerId, request.amount(), request.requestId(), request.reason());
 		return new BalanceResponse(walletService.credit(playerId, change.amount(), change.reason(), change.requestId()));
 	}
 
 	@PostMapping("/debit")
+	@Operation(summary = "Debit a player's wallet",
+			description = "Decreases the wallet balance by the given amount and appends a debit ledger entry. "
+					+ "Rejected with 409 if the balance is not enough. "
+					+ "Retrying with the same requestId applies the debit only once.")
+	@ApiResponse(responseCode = "200", description = "The balance after the debit",
+			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = BalanceResponse.class)))
+	@ApiResponse(responseCode = "400", description = "A field is missing or invalid (codes: missing_field, invalid_amount, malformed_body)",
+			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "404", description = "No player with the given id exists (code: player_not_found)",
+			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "409", description = "The balance is not enough to cover the debit (code: insufficient_balance)",
+			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
 	public BalanceResponse debit(@PathVariable long playerId, @RequestBody AmountRequest request) {
 		ChangeRequest change = parse(playerId, request.amount(), request.requestId(), request.reason());
 		return new BalanceResponse(walletService.debit(playerId, change.amount(), change.reason(), change.requestId()));
 	}
 
 	@PostMapping("/refund")
+	@Operation(summary = "Refund a prior debit",
+			description = "Credits the wallet to reverse a prior debit, referencing the original debit's ledger entry. "
+					+ "A refund is never subject to the overdraft guard, and a debit can be refunded only once. "
+					+ "Retrying with the same requestId applies the refund only once.")
+	@ApiResponse(responseCode = "200", description = "The balance after the refund",
+			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = BalanceResponse.class)))
+	@ApiResponse(responseCode = "400", description = "A field is missing or invalid (codes: missing_field, invalid_amount, invalid_original_debit_id, malformed_body)",
+			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "404", description = "The player or the original debit does not exist (codes: player_not_found, debit_not_found)",
+			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "409", description = "The original debit has already been refunded (code: already_refunded)",
+			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
 	public BalanceResponse refund(@PathVariable long playerId, @RequestBody RefundRequest request) {
 		ChangeRequest change = parse(playerId, request.amount(), request.requestId(), request.reason());
 		requireOriginalDebitId(request.originalDebitId());

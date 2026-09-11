@@ -57,6 +57,13 @@ class WalletBalanceControllerTest {
 				.andExpect(jsonPath("$.code").value("player_not_found"));
 	}
 
+	@Test
+	void nonNumericPlayerIdReturns400() throws Exception {
+		mockMvc.perform(get("/players/{playerId}/wallet", "abc"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("invalid_path"));
+	}
+
 	private String creditBody(String amount, String requestId, String reasonKind, String description) {
 		return "{"
 				+ "\"amount\":\"" + amount + "\","
