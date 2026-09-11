@@ -72,9 +72,9 @@ with PostgreSQL as a drop-in profile.
 - `amount` is a decimal string (e.g. `"10.00"`) converted to US cents at the boundary; must be a positive
   whole number of cents after conversion.
 - `requestId` is a client-supplied UUID (the Idempotency Key).
-- `reason` is structured: a `reasonKind` enum (`MISSION_REWARD`, `PURCHASE`, `ADMIN`, `REFUND`), a
-  human `description`, and an optional `referenceId`. Refund uses `referenceId` to point at the original
-  Debit's Ledger Entry id.
+- `reason` is structured: a `reasonKind` enum (`MISSION_REWARD`, `PURCHASE`, `ADMIN`, `REFUND`) and a
+  human `description`. A Refund's ReasonKind is `REFUND`; the link back to the original Debit's Ledger Entry
+  id is carried by `originalDebitId`, not by the reason.
 
 ### Idempotency & concurrency
 
@@ -121,7 +121,7 @@ with PostgreSQL as a drop-in profile.
 - **H2 by default** (in-memory for tests, file or in-memory for run); **PostgreSQL profile** as a drop-in
   (ADR not needed — same SQL).
 - Schema: `player` (id), `wallet` (id, player_id, balance, version), `ledger_entry`
-  (id, wallet_id, amount, direction, reason_kind, description, reference_id, request_id UNIQUE,
+  (id, wallet_id, amount, direction, reason_kind, description, request_id UNIQUE,
   original_debit_id UNIQUE NULL, created_at).
 
 ### Observability & docs

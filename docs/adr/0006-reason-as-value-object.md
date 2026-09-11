@@ -1,8 +1,8 @@
 # 0006: Reason embedded, not a separate table
 
-A ledger entry stores its Reason (kind, description, referenceId) directly as columns within
+A ledger entry stores its Reason (kind, description) directly as columns within
 the entry's row via an `@Embeddable`, never as a separate table. We rejected normalizing Reason into
-its own table (e.g. `reason(id, kind, description, reference_id)` referenced by FK) for two reasons:
+its own table (e.g. `reason(id, kind, description)` referenced by FK) for two reasons:
 
 - **Immutability / auditability.** Every balance change records *what happened and why* at the moment it
   occurred. If Reason lived in a separate table, updating the text later would silently rewrite history,

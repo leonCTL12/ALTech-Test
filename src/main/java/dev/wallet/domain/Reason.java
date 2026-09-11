@@ -15,16 +15,12 @@ public class Reason {
 	@Column(name = "description", length = 255, nullable = false)
 	private String description;
 
-	@Column(name = "reference_id")
-	private Long referenceId;
-
 	protected Reason() {
 	}
 
-	public Reason(ReasonKind kind, String description, Long referenceId) {
+	public Reason(ReasonKind kind, String description) {
 		this.kind = kind;
 		this.description = description;
-		this.referenceId = referenceId;
 	}
 
 	public ReasonKind getKind() {
@@ -33,9 +29,5 @@ public class Reason {
 
 	public String getDescription() {
 		return description;
-	}
-
-	public Long getReferenceId() {
-		return referenceId;
 	}
 }

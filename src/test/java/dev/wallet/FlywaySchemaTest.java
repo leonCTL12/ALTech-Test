@@ -30,7 +30,7 @@ class FlywaySchemaTest {
 		assertThat(columnsOf("WALLET")).containsExactlyInAnyOrder("ID", "PLAYER_ID", "BALANCE", "VERSION");
 		assertThat(columnsOf("LEDGER_ENTRY")).containsExactlyInAnyOrder(
 				"ID", "WALLET_ID", "AMOUNT", "DIRECTION", "REASON_KIND",
-				"DESCRIPTION", "REFERENCE_ID", "REQUEST_ID", "ORIGINAL_DEBIT_ID", "CREATED_AT");
+				"DESCRIPTION", "REQUEST_ID", "ORIGINAL_DEBIT_ID", "CREATED_AT");
 	}
 
 	@Test

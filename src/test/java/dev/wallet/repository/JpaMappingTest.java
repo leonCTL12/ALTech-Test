@@ -50,7 +50,7 @@ class JpaMappingTest {
 	@Test
 	void ledgerEntrySavesAndReadsBackWithItsWalletAndReason() {
 		Wallet wallet = newWallet(0L);
-		Reason reason = new Reason(ReasonKind.MISSION_REWARD, "Completed level 3", 42L);
+		Reason reason = new Reason(ReasonKind.MISSION_REWARD, "Completed level 3");
 		String requestId = UUID.randomUUID().toString();
 
 		LedgerEntry saved = ledgerEntries.saveAndFlush(
@@ -62,7 +62,6 @@ class JpaMappingTest {
 		assertThat(found.getDirection()).isEqualTo(Direction.CREDIT);
 		assertThat(found.getReason().getKind()).isEqualTo(ReasonKind.MISSION_REWARD);
 		assertThat(found.getReason().getDescription()).isEqualTo("Completed level 3");
-		assertThat(found.getReason().getReferenceId()).isEqualTo(42L);
 		assertThat(found.getRequestId()).isEqualTo(requestId);
 		assertThat(found.getOriginalDebitId()).isNull();
 		assertThat(found.getCreatedAt()).isNotNull();
@@ -71,7 +70,7 @@ class JpaMappingTest {
 	@Test
 	void insertingTwoEntriesWithTheSameRequestIdFailsOnTheUniqueConstraint() {
 		Wallet wallet = newWallet(0L);
-		Reason reason = new Reason(ReasonKind.ADMIN, "test", null);
+		Reason reason = new Reason(ReasonKind.ADMIN, "test");
 		String requestId = UUID.randomUUID().toString();
 		ledgerEntries.saveAndFlush(new LedgerEntry(wallet, 100L, Direction.CREDIT, reason, requestId, null));
 

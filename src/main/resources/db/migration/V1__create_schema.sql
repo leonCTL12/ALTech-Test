@@ -18,7 +18,6 @@ CREATE TABLE ledger_entry (
     direction         VARCHAR(16) NOT NULL,
     reason_kind       VARCHAR(32) NOT NULL,
     description       VARCHAR(255) NOT NULL,
-    reference_id      BIGINT,
     request_id        VARCHAR(36) NOT NULL,
     original_debit_id BIGINT,
     created_at        TIMESTAMP   NOT NULL,

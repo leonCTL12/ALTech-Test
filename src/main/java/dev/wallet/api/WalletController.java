@@ -144,7 +144,7 @@ public class WalletController {
 		require(requestId, "requestId");
 		requireReason(reason);
 		MinorUnits minor = toMinorUnits(amount);
-		Reason r = new Reason(reason.kind(), reason.description(), reason.referenceId());
+		Reason r = new Reason(reason.kind(), reason.description());
 		return new ChangeRequest(minor, r, requestId.trim());
 	}
 
@@ -239,9 +239,7 @@ public class WalletController {
 			@Schema(description = "The kind of change; REFUND is reserved for refunds.", example = "MISSION_REWARD")
 			ReasonKind kind,
 			@Schema(description = "Free-form description of what happened and why.", example = "Completed level 3")
-			String description,
-			@Schema(description = "Optional reference to the entity that caused the change.", example = "1024")
-			Long referenceId) {
+			String description) {
 	}
 
 	public record BalanceResponse(String balance) {
@@ -262,10 +260,10 @@ public class WalletController {
 		}
 	}
 
-	public record ReasonResponse(String reasonKind, String description, Long referenceId) {
+	public record ReasonResponse(String reasonKind, String description) {
 
 		static ReasonResponse from(Reason reason) {
-			return new ReasonResponse(reason.getKind().name(), reason.getDescription(), reason.getReferenceId());
+			return new ReasonResponse(reason.getKind().name(), reason.getDescription());
 		}
 	}
 }
