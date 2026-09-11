@@ -6,6 +6,7 @@ import dev.wallet.api.error.ApiException;
 import dev.wallet.api.error.ErrorResponse;
 import dev.wallet.service.PlayerService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -37,7 +38,7 @@ public class PlayerController {
 			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = CreatePlayerResponse.class)))
 	@ApiResponse(responseCode = "400", description = "A non-empty or malformed request body was sent (codes: non_empty_body, malformed_body)",
 			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
-	public CreatePlayerResponse createPlayer(@RequestBody(required = false) String body) {
+	public CreatePlayerResponse createPlayer(@RequestBody(required = false) @Parameter(hidden = true) String body) {
 		requireEmptyBody(body);
 		return new CreatePlayerResponse(playerService.createPlayer());
 	}

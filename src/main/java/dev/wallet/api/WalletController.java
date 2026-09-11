@@ -214,13 +214,34 @@ public class WalletController {
 		require(reason.description(), "reason.description");
 	}
 
-	public record AmountRequest(String amount, String requestId, ReasonInput reason) {
+	public record AmountRequest(
+			@Schema(description = "Amount to move, a decimal string with at most two fractional digits.", examples = {"10.00"})
+			String amount,
+			@Schema(description = "Client-supplied idempotency key; an identical requestId applies only once.", example = "b4a1f2c0-8d3e-4a5b-9c6d-0e1f2a3b4c5d")
+			String requestId,
+			@Schema(description = "Why the change happened.")
+			ReasonInput reason) {
 	}
 
-	public record RefundRequest(String amount, String requestId, ReasonInput reason, Long originalDebitId) {
+	public record RefundRequest(
+			@Schema(description = "Amount to refund, a decimal string with at most two fractional digits.", examples = {"10.00"})
+			String amount,
+			@Schema(description = "Client-supplied idempotency key; an identical requestId applies only once.", example = "c7e5a1b2-9d4e-4f6a-8c1b-2d3e4f5a6b7c")
+			String requestId,
+			@Schema(description = "Why the refund happened.")
+			ReasonInput reason,
+			@Schema(description = "Ledger entry id of the original debit being refunded.", example = "42")
+			Long originalDebitId) {
 	}
 
-	public record ReasonInput(@JsonProperty("reasonKind") ReasonKind kind, String description, Long referenceId) {
+	public record ReasonInput(
+			@JsonProperty("reasonKind")
+			@Schema(description = "The kind of change; REFUND is reserved for refunds.", example = "MISSION_REWARD")
+			ReasonKind kind,
+			@Schema(description = "Free-form description of what happened and why.", example = "Completed level 3")
+			String description,
+			@Schema(description = "Optional reference to the entity that caused the change.", example = "1024")
+			Long referenceId) {
 	}
 
 	public record BalanceResponse(String balance) {
