@@ -6,6 +6,14 @@
 
 **Status:** ready-for-agent
 
+## Comments
+
+- Superseded by direct authoring: the README (`/README.md`) was written in a grilling session with the
+  author rather than through this ticket. The checklist below is satisfied; the README additionally gained
+  a curated design-decisions list, an expanded concurrency section (database-as-guard paragraph), a
+  four-item future-work list, and a "How this was built" agentic-workflow section. `CONTEXT.md` gained the
+  two idempotency senses as canonical terms.
+
 - [ ] How to run: prerequisites, database (H2 default, PostgreSQL profile), and the test command
 - [ ] Design decisions section explains the ledger approach and trade-offs
 - [ ] Concurrency & Idempotency section explains both mechanisms **and the deliberate response-idempotency deviation** (see the contract below)

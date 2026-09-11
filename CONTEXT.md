@@ -55,3 +55,11 @@ _Avoid_: insufficient funds, NSF
 **Duplicate Submission**:
 A repeat of a request carrying an Idempotency Key the system has already applied; the original result is returned and nothing is applied twice.
 _Avoid_: retry, re-entry
+
+**Effect Idempotency**:
+The property that replaying a request has no extra effect — it is never applied twice. Guaranteed here by the UNIQUE constraint on the Idempotency Key; a concurrent duplicate is never a conflict. This is the sense that protects money.
+_Avoid_: request idempotency (unqualified)
+
+**Response Idempotency**:
+The property that a replay returns the same response body as the first call. We deliberately do **not** hold this: a replay returns `200` with the wallet's true current Balance. The ledger, not the POST echo, is the source of truth for what a request did.
+_Avoid_: request idempotency (unqualified)
