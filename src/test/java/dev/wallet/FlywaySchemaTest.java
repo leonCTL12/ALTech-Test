@@ -46,7 +46,7 @@ class FlywaySchemaTest {
 
 	private Set<String> columnsOf(String table) {
 		return jdbc.queryForList(
-						"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ?",
+						"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE UPPER(TABLE_NAME) = UPPER(?)",
 						String.class, table)
 				.stream().map(String::toUpperCase).collect(Collectors.toSet());
 	}
@@ -54,7 +54,7 @@ class FlywaySchemaTest {
 	private Set<String> uniqueConstraintsOf(String table) {
 		return jdbc.queryForList(
 						"SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS "
-								+ "WHERE TABLE_NAME = ? AND CONSTRAINT_TYPE = 'UNIQUE'",
+								+ "WHERE UPPER(TABLE_NAME) = UPPER(?) AND CONSTRAINT_TYPE = 'UNIQUE'",
 						String.class, table)
 				.stream().map(String::toUpperCase).collect(Collectors.toSet());
 	}
