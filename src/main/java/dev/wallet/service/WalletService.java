@@ -71,6 +71,10 @@ public class WalletService {
 			throw new ApiException(HttpStatus.NOT_FOUND, "debit_not_found",
 					"Ledger entry " + originalLedgerEntryId + " is not a debit.");
 		}
+		if (!originalEntry.getWallet().getId().equals(wallet.getId())) {
+			throw new ApiException(HttpStatus.NOT_FOUND, "debit_not_found",
+					"No debit with id " + originalLedgerEntryId + " exists.");
+		}
 
 		long refundAmount = originalEntry.getAmount();
 		ledgerEntries.save(new LedgerEntry(wallet, refundAmount, Direction.CREDIT, reason, requestId, originalLedgerEntryId));

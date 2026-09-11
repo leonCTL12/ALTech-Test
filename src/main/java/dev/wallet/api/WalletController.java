@@ -125,6 +125,10 @@ public class WalletController {
 		requirePlayerId(playerId);
 		require(request.requestId(), "requestId");
 		requireReason(request.reason());
+		if (request.reason().kind() != ReasonKind.REFUND) {
+			throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_reason_kind",
+					"A refund's reason.reasonKind must be REFUND.", "reason.reasonKind");
+		}
 		requireOriginalLedgerEntryId(request.originalLedgerEntryId());
 		Reason reason = new Reason(request.reason().kind(), request.reason().description());
 		return new BalanceResponse(walletService.refund(playerId, reason,
@@ -216,6 +220,10 @@ public class WalletController {
 					"The field 'reason.reasonKind' is required.", "reason.reasonKind");
 		}
 		require(reason.description(), "reason.description");
+		if (reason.description().length() > 255) {
+			throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_reason",
+					"reason.description must be at most 255 characters.", "reason.description");
+		}
 	}
 
 	public record CreditRequest(
