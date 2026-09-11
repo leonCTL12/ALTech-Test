@@ -31,6 +31,9 @@ public class WalletService {
 	@Transactional
 	public String credit(long playerId, MinorUnits amount, Reason reason, String requestId) {
 		Wallet wallet = walletOrThrow(wallets.findByPlayerIdForUpdate(playerId), playerId);
+		if (alreadyApplied(requestId)) {
+			return MinorUnits.format(wallet.getBalance());
+		}
 		ledgerEntries.save(new LedgerEntry(wallet, amount.value(), Direction.CREDIT, reason, requestId, null));
 		return MinorUnits.format(wallet.credit(amount.value()));
 	}
@@ -38,6 +41,9 @@ public class WalletService {
 	@Transactional
 	public String debit(long playerId, MinorUnits amount, Reason reason, String requestId) {
 		Wallet wallet = walletOrThrow(wallets.findByPlayerIdForUpdate(playerId), playerId);
+		if (alreadyApplied(requestId)) {
+			return MinorUnits.format(wallet.getBalance());
+		}
 		if (wallets.debitIfSufficient(wallet.getId(), amount.value()) == 0) {
 			throw new ApiException(HttpStatus.CONFLICT, "insufficient_balance",
 					"The balance of " + MinorUnits.format(wallet.getBalance())
@@ -51,7 +57,7 @@ public class WalletService {
 	public String refund(long playerId, MinorUnits amount, Reason reason, String requestId, Long originalDebitId) {
 		Wallet wallet = walletOrThrow(wallets.findByPlayerIdForUpdate(playerId), playerId);
 
-		if (ledgerEntries.findByRequestId(requestId).isPresent()) {
+		if (alreadyApplied(requestId)) {
 			return MinorUnits.format(wallet.getBalance());
 		}
 		if (ledgerEntries.findByOriginalDebitId(originalDebitId).isPresent()) {
@@ -88,6 +94,10 @@ public class WalletService {
 	}
 
 	public record LedgerHistory(List<LedgerEntry> entries, Long nextAfter) {
+	}
+
+	private boolean alreadyApplied(String requestId) {
+		return ledgerEntries.findByRequestId(requestId).isPresent();
 	}
 
 	private Wallet walletOrThrow(Optional<Wallet> wallet, long playerId) {

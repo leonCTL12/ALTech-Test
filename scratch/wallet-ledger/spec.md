@@ -30,7 +30,7 @@ with PostgreSQL as a drop-in profile.
 7. As a player, I want a refund of a debit to add the value back, so that a mistaken purchase is reversible.
 8. As a player, I want a refund to be refused if the debit was already refunded, so that I cannot reverse the same debit twice.
 9. As an operator, I want a request carrying a repeated idempotency key to be ignored, so that a retry after a network failure does not double-charge.
-10. As an operator, I want a repeated request to return the original result, so that retries are transparent to the caller.
+10. As an operator, I want a repeated request to return `200` with the wallet's true current balance, so that a retry never double-charges and the caller always sees where the wallet stands. (We deliberately relax response idempotency — see Idempotency & concurrency.)
 11. As an operator, I want to create a player together with its wallet in one call, so that the service is
     self-contained and demoable without touching the database.
 12. As an operator, I want any wallet operation for an unknown player to return 404, so that missing players
@@ -80,7 +80,11 @@ with PostgreSQL as a drop-in profile.
 
 - **Idempotency Key = client UUID, enforced by a UNIQUE constraint** on the Ledger Entry (ADR-0003). The
   database is the final guard: two simultaneous identical requests cannot both insert.
-- **Duplicate Submission returns the original result** (200 with the same outcome), never a conflict.
+- **Duplicate Submission is ignored for money and answered with the wallet's current Balance** (`200`,
+  never a conflict). This deliberately relaxes *response* idempotency (same request → identical response
+  body): a replay returns the true current Balance, which may differ from the first response if other
+  operations ran in between. *Effect* idempotency — the same request is never applied twice — is guaranteed
+  by the UNIQUE constraint. The ledger, not the POST echo, is the source of truth for what a request did.
 - **Overdraft Guard** implemented as a conditional update in the write transaction:
   `UPDATE wallet SET balance = balance - :amount WHERE id = :id AND balance >= :amount`. If zero rows are
   affected, the Debit is rejected (409). This is atomic under concurrency because the row is locked by the
@@ -109,7 +113,7 @@ with PostgreSQL as a drop-in profile.
 
 - Global `@RestControllerAdvice` returning `{ "code": "...", "message": "...", "field": "..." }`.
 - Statuses: `400` invalid input, `404` missing player/debit, `409` insufficient balance or
-  already-refunded debit. Duplicate Submission returns `200` with the original result.
+  already-refunded debit. Duplicate Submission returns `200` with the wallet's current balance.
 
 ### Database
 
@@ -141,7 +145,8 @@ with PostgreSQL as a drop-in profile.
   - Credit increases Balance and appends one Ledger Entry with the correct Reason.
   - Debit decreases Balance and appends one Ledger Entry.
   - Debit that would overdraw is rejected with 409 and Balance is unchanged.
-  - Repeated submission of the same requestId applies once and returns the original result.
+  - Repeated submission of the same requestId applies once, is never a conflict, and returns `200` with the
+    current balance.
   - Two concurrent identical requests apply once (thread pool through the API seam).
   - Two concurrent debits leave the final Balance correct and never negative.
   - Refund restores the amount, is refused a second time (409), and is not subject to the overdraft guard.
