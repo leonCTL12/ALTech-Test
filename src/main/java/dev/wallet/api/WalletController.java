@@ -112,10 +112,11 @@ public class WalletController {
 			description = "Credits the wallet to reverse a prior debit, restoring exactly the amount of the original "
 					+ "debit's ledger entry and appending a new credit entry that references it. "
 					+ "A refund is never subject to the overdraft guard, and a debit can be refunded only once. "
+					+ "The entry's reasonKind is always REFUND; the client supplies only a description. "
 					+ "Retrying with the same requestId applies the refund only once.")
 	@ApiResponse(responseCode = "200", description = "The balance after the refund",
 			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = BalanceResponse.class)))
-	@ApiResponse(responseCode = "400", description = "A field is missing or invalid (codes: missing_field, invalid_original_ledger_entry_id, malformed_body)",
+	@ApiResponse(responseCode = "400", description = "A field is missing or invalid (codes: missing_field, invalid_reason, invalid_original_ledger_entry_id, malformed_body)",
 			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
 	@ApiResponse(responseCode = "404", description = "The player or the original debit does not exist (codes: player_not_found, debit_not_found)",
 			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
@@ -124,13 +125,9 @@ public class WalletController {
 	public BalanceResponse refund(@PathVariable long playerId, @RequestBody RefundRequest request) {
 		requirePlayerId(playerId);
 		require(request.requestId(), "requestId");
-		requireReason(request.reason());
-		if (request.reason().kind() != ReasonKind.REFUND) {
-			throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_reason_kind",
-					"A refund's reason.reasonKind must be REFUND.", "reason.reasonKind");
-		}
+		requireDescription(request.description(), "description");
 		requireOriginalLedgerEntryId(request.originalLedgerEntryId());
-		Reason reason = new Reason(request.reason().kind(), request.reason().description());
+		Reason reason = new Reason(ReasonKind.REFUND, request.description());
 		return new BalanceResponse(walletService.refund(playerId, reason,
 				request.requestId().trim(), request.originalLedgerEntryId()));
 	}
@@ -219,10 +216,14 @@ public class WalletController {
 			throw new ApiException(HttpStatus.BAD_REQUEST, "missing_field",
 					"The field 'reason.reasonKind' is required.", "reason.reasonKind");
 		}
-		require(reason.description(), "reason.description");
-		if (reason.description().length() > 255) {
+		requireDescription(reason.description(), "reason.description");
+	}
+
+	private void requireDescription(String description, String field) {
+		require(description, field);
+		if (description.length() > 255) {
 			throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_reason",
-					"reason.description must be at most 255 characters.", "reason.description");
+					field + " must be at most 255 characters.", field);
 		}
 	}
 
@@ -253,8 +254,8 @@ public class WalletController {
 	public record RefundRequest(
 			@Schema(description = "Client-supplied idempotency key; an identical requestId applies only once.", example = "c7e5a1b2-9d4e-4f6a-8c1b-2d3e4f5a6b7c")
 			String requestId,
-			@Schema(description = "Why the refund happened.")
-			ReasonInput reason,
+			@Schema(description = "Why the refund happened; the ledger entry's reasonKind is always REFUND.", example = "Refund of purchase")
+			String description,
 			@Schema(description = "Ledger entry id of the original debit being refunded; the refund restores exactly that "
 					+ "debit's amount, which the client cannot choose.", example = "42")
 			Long originalLedgerEntryId) {

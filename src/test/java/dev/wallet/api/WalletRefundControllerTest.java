@@ -173,22 +173,18 @@ class WalletRefundControllerTest {
 	}
 
 	@Test
-	void refundWithANonRefundReasonKindReturns400() throws Exception {
+	void refundWithoutOriginalDebitIdReturns400() throws Exception {
 		long playerId = createPlayer();
 		credit(playerId, "10.00");
-		long debitId = debit(playerId, "4.00");
 
 		mockMvc.perform(post("/players/{playerId}/wallet/refund", playerId)
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("{"
 								+ "\"requestId\":\"" + UUID.randomUUID() + "\","
-								+ "\"reason\":{\"reasonKind\":\"MISSION_REWARD\",\"description\":\"not a refund\"},"
-								+ "\"originalLedgerEntryId\":" + debitId
+								+ "\"description\":\"Refund of purchase\""
 								+ "}"))
 				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.code").value("invalid_reason_kind"));
-
-		assertThat(balanceOf(playerId)).isEqualTo(600L);
+				.andExpect(jsonPath("$.code").value("missing_field"));
 	}
 
 	@Test
@@ -201,28 +197,13 @@ class WalletRefundControllerTest {
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("{"
 								+ "\"requestId\":\"" + UUID.randomUUID() + "\","
-								+ "\"reason\":{\"reasonKind\":\"REFUND\",\"description\":\"" + "x".repeat(256) + "\"},"
+								+ "\"description\":\"" + "x".repeat(256) + "\","
 								+ "\"originalLedgerEntryId\":" + debitId
 								+ "}"))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.code").value("invalid_reason"));
 
 		assertThat(balanceOf(playerId)).isEqualTo(600L);
-	}
-
-	@Test
-	void refundWithoutOriginalDebitIdReturns400() throws Exception {
-		long playerId = createPlayer();
-		credit(playerId, "10.00");
-
-		mockMvc.perform(post("/players/{playerId}/wallet/refund", playerId)
-						.contentType(MediaType.APPLICATION_JSON)
-						.content("{"
-								+ "\"requestId\":\"" + UUID.randomUUID() + "\","
-								+ "\"reason\":{\"reasonKind\":\"REFUND\",\"description\":\"test\"}"
-								+ "}"))
-				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.code").value("missing_field"));
 	}
 
 	@Test
@@ -298,7 +279,7 @@ class WalletRefundControllerTest {
 	private String refundBody(String requestId, long debitId) {
 		return "{"
 				+ "\"requestId\":\"" + requestId + "\","
-				+ "\"reason\":{\"reasonKind\":\"REFUND\",\"description\":\"Refund of purchase\"},"
+				+ "\"description\":\"Refund of purchase\","
 				+ "\"originalLedgerEntryId\":" + debitId
 				+ "}";
 	}
@@ -307,7 +288,7 @@ class WalletRefundControllerTest {
 		return "{"
 				+ "\"amount\":\"" + amount + "\","
 				+ "\"requestId\":\"" + requestId + "\","
-				+ "\"reason\":{\"reasonKind\":\"REFUND\",\"description\":\"Refund of purchase\"},"
+				+ "\"description\":\"Refund of purchase\","
 				+ "\"originalLedgerEntryId\":" + debitId
 				+ "}";
 	}

@@ -85,11 +85,11 @@ curl -X POST http://localhost:8080/players/1/wallet/debit \
 # {"balance":"6.00"}
 
 # Refund reverses a debit by its ledger entry id — the amount is always the debit's exact amount,
-# so no amount is accepted here.
+# so no amount is accepted here; the reasonKind is always REFUND, so only a description is sent.
 curl -X POST http://localhost:8080/players/1/wallet/refund \
   -H 'Content-Type: application/json' \
   -d '{"requestId":"c7e5a1b2-9d4e-4f6a-8c1b-2d3e4f5a6b7c",
-       "reason":{"reasonKind":"REFUND","description":"Refund of purchase"},
+       "description":"Refund of purchase",
        "originalLedgerEntryId":2}'
 # {"balance":"10.00"}
 ```

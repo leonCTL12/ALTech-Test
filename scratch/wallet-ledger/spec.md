@@ -65,7 +65,7 @@ with PostgreSQL as a drop-in profile.
   transaction; returns the generated `playerId`. No Idempotency Key: it is not a money movement.
 - `POST /players/{playerId}/wallet/credit` — body: `{ amount, requestId, reason }`
 - `POST /players/{playerId}/wallet/debit` — body: `{ amount, requestId, reason }`
-- `POST /players/{playerId}/wallet/refund` — body: `{ requestId, reason, originalLedgerEntryId }`
+- `POST /players/{playerId}/wallet/refund` — body: `{ requestId, description, originalLedgerEntryId }`
 - `GET /players/{playerId}/wallet` — returns current Balance
 - `GET /players/{playerId}/wallet/transactions?after=<entryId>&limit=<n>` — cursor-paginated history,
   newest first
@@ -73,8 +73,10 @@ with PostgreSQL as a drop-in profile.
   whole number of cents after conversion.
 - `requestId` is a client-supplied UUID (the Idempotency Key).
 - `reason` is structured: a `reasonKind` enum (`MISSION_REWARD`, `PURCHASE`, `ADMIN`, `REFUND`) and a
-  human `description`. A Refund's ReasonKind is `REFUND`; the link back to the original Debit's Ledger Entry
-  id is carried by `originalLedgerEntryId`, not by the reason.
+  human `description`. Credit and Debit carry a full `reason`; a Refund carries only a free-form
+  `description` because its ReasonKind is always `REFUND` — the server sets it, the client cannot choose.
+  The link back to the original Debit's Ledger Entry id is carried by `originalLedgerEntryId`,
+  not by the reason.
 
 ### Idempotency & concurrency
 
