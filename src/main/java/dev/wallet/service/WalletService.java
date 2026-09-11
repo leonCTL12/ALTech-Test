@@ -12,6 +12,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 @Service
 public class WalletService {
 
@@ -25,10 +27,18 @@ public class WalletService {
 
 	@Transactional
 	public String credit(long playerId, MinorUnits amount, Reason reason, String requestId) {
-		Wallet wallet = wallets.findByPlayerIdForUpdate(playerId)
-				.orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "player_not_found",
-						"No player with id " + playerId + " exists."));
+		Wallet wallet = walletOrThrow(wallets.findByPlayerIdForUpdate(playerId), playerId);
 		ledgerEntries.save(new LedgerEntry(wallet, amount.value(), Direction.CREDIT, reason, requestId, null));
 		return MinorUnits.format(wallet.credit(amount.value()));
+	}
+
+	public String getBalance(long playerId) {
+		Wallet wallet = walletOrThrow(wallets.findByPlayerId(playerId), playerId);
+		return MinorUnits.format(wallet.getBalance());
+	}
+
+	private Wallet walletOrThrow(Optional<Wallet> wallet, long playerId) {
+		return wallet.orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "player_not_found",
+				"No player with id " + playerId + " exists."));
 	}
 }

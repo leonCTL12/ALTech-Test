@@ -7,6 +7,7 @@ import dev.wallet.domain.Reason;
 import dev.wallet.domain.ReasonKind;
 import dev.wallet.service.WalletService;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -21,6 +22,12 @@ public class WalletController {
 
 	public WalletController(WalletService walletService) {
 		this.walletService = walletService;
+	}
+
+	@GetMapping
+	public BalanceResponse getBalance(@PathVariable long playerId) {
+		requirePlayerId(playerId);
+		return new BalanceResponse(walletService.getBalance(playerId));
 	}
 
 	@PostMapping("/credit")
@@ -76,5 +83,8 @@ public class WalletController {
 	}
 
 	public record CreditResponse(String balance) {
+	}
+
+	public record BalanceResponse(String balance) {
 	}
 }
