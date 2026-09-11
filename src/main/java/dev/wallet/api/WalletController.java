@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("/players/{playerId}/wallet")
@@ -32,6 +33,10 @@ public class WalletController {
 	private static final int DEFAULT_LIMIT = 50;
 
 	private static final int MAX_LIMIT = 100;
+
+	/** Canonical UUID form (36 chars) — the only form that fits the request_id VARCHAR(36) column. */
+	private static final Pattern UUID_PATTERN = Pattern.compile(
+			"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
 
 	private final WalletService walletService;
 
@@ -80,7 +85,7 @@ public class WalletController {
 					+ "Retrying with the same requestId applies the credit only once.")
 	@ApiResponse(responseCode = "200", description = "The balance after the credit",
 			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = BalanceResponse.class)))
-	@ApiResponse(responseCode = "400", description = "A field is missing or invalid (codes: missing_field, invalid_amount, malformed_body)",
+	@ApiResponse(responseCode = "400", description = "A field is missing or invalid (codes: missing_field, invalid_request_id, invalid_amount, malformed_body)",
 			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
 	@ApiResponse(responseCode = "404", description = "No player with the given id exists (code: player_not_found)",
 			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
@@ -96,7 +101,7 @@ public class WalletController {
 					+ "Retrying with the same requestId applies the debit only once.")
 	@ApiResponse(responseCode = "200", description = "The balance after the debit",
 			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = BalanceResponse.class)))
-	@ApiResponse(responseCode = "400", description = "A field is missing or invalid (codes: missing_field, invalid_amount, malformed_body)",
+	@ApiResponse(responseCode = "400", description = "A field is missing or invalid (codes: missing_field, invalid_request_id, invalid_amount, malformed_body)",
 			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
 	@ApiResponse(responseCode = "404", description = "No player with the given id exists (code: player_not_found)",
 			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
@@ -116,7 +121,7 @@ public class WalletController {
 					+ "Retrying with the same requestId applies the refund only once.")
 	@ApiResponse(responseCode = "200", description = "The balance after the refund",
 			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = BalanceResponse.class)))
-	@ApiResponse(responseCode = "400", description = "A field is missing or invalid (codes: missing_field, invalid_reason, invalid_original_ledger_entry_id, malformed_body)",
+	@ApiResponse(responseCode = "400", description = "A field is missing or invalid (codes: missing_field, invalid_request_id, invalid_reason, invalid_original_ledger_entry_id, malformed_body)",
 			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
 	@ApiResponse(responseCode = "404", description = "The player or the original debit does not exist (codes: player_not_found, debit_not_found)",
 			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
@@ -124,7 +129,7 @@ public class WalletController {
 			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
 	public BalanceResponse refund(@PathVariable long playerId, @RequestBody RefundRequest request) {
 		requirePlayerId(playerId);
-		require(request.requestId(), "requestId");
+		requireRequestId(request.requestId());
 		requireDescription(request.description(), "description");
 		requireOriginalLedgerEntryId(request.originalLedgerEntryId());
 		Reason reason = new Reason(ReasonKind.REFUND, request.description());
@@ -146,7 +151,7 @@ public class WalletController {
 	private ChangeRequest parse(long playerId, String amount, String requestId, ReasonInput reason) {
 		requirePlayerId(playerId);
 		require(amount, "amount");
-		require(requestId, "requestId");
+		requireRequestId(requestId);
 		requireReason(reason);
 		MinorUnits minor = toMinorUnits(amount);
 		Reason r = new Reason(reason.kind(), reason.description());
@@ -227,12 +232,22 @@ public class WalletController {
 		}
 	}
 
+	private void requireRequestId(String requestId) {
+		require(requestId, "requestId");
+		String trimmed = requestId.trim();
+		if (!UUID_PATTERN.matcher(trimmed).matches()) {
+			throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_request_id",
+					"requestId must be a client-supplied UUID in canonical form (36 characters).", "requestId");
+		}
+	}
+
 	public record CreditRequest(
 			@Schema(description = "Amount to move, a decimal string with at most two fractional digits.", examples = {"10.00"})
 			String amount,
-			@Schema(description = "Client-supplied idempotency key; an identical requestId applies only once. "
+			@Schema(description = "Client-supplied idempotency key (a UUID); an identical requestId applies only once. "
 					+ "Generate a fresh value per operation — reusing a key that a different operation already used "
 					+ "makes this request a no-op that returns the current balance.",
+					format = "uuid",
 					example = "b4a1f2c0-8d3e-4a5b-9c6d-0e1f2a3b4c5d")
 			String requestId,
 			@Schema(description = "Why the change happened.")
@@ -242,9 +257,10 @@ public class WalletController {
 	public record DebitRequest(
 			@Schema(description = "Amount to move, a decimal string with at most two fractional digits.", examples = {"4.00"})
 			String amount,
-			@Schema(description = "Client-supplied idempotency key; an identical requestId applies only once. "
+			@Schema(description = "Client-supplied idempotency key (a UUID); an identical requestId applies only once. "
 					+ "Generate a fresh value per operation — reusing a key that a different operation already used "
 					+ "makes this request a no-op that returns the current balance.",
+					format = "uuid",
 					example = "e3f9a2b1-7c4d-4a8e-9f6b-1c2d3e4f5a6d")
 			String requestId,
 			@Schema(description = "Why the change happened.")
@@ -252,7 +268,8 @@ public class WalletController {
 	}
 
 	public record RefundRequest(
-			@Schema(description = "Client-supplied idempotency key; an identical requestId applies only once.", example = "c7e5a1b2-9d4e-4f6a-8c1b-2d3e4f5a6b7c")
+			@Schema(description = "Client-supplied idempotency key (a UUID); an identical requestId applies only once.",
+					format = "uuid", example = "c7e5a1b2-9d4e-4f6a-8c1b-2d3e4f5a6b7c")
 			String requestId,
 			@Schema(description = "Why the refund happened; the ledger entry's reasonKind is always REFUND.", example = "Refund of purchase")
 			String description,

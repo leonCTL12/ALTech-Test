@@ -188,6 +188,21 @@ class WalletRefundControllerTest {
 	}
 
 	@Test
+	void refundWithInvalidRequestIdReturns400() throws Exception {
+		long playerId = createPlayer();
+		credit(playerId, "10.00");
+		long debitId = debit(playerId, "4.00");
+
+		mockMvc.perform(post("/players/{playerId}/wallet/refund", playerId)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("{\"requestId\":\"not-a-uuid\",\"description\":\"Refund of purchase\",\"originalLedgerEntryId\":" + debitId + "}"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("invalid_request_id"));
+
+		assertThat(balanceOf(playerId)).isEqualTo(600L);
+	}
+
+	@Test
 	void refundWithAnOverlongDescriptionReturns400() throws Exception {
 		long playerId = createPlayer();
 		credit(playerId, "10.00");

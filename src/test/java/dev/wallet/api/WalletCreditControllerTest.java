@@ -108,6 +108,26 @@ class WalletCreditControllerTest {
 	}
 
 	@Test
+	void invalidRequestIdReturns400AndLeavesBalanceUnchanged() throws Exception {
+		long playerId = createPlayer();
+		long walletId = wallets.findByPlayerId(playerId).orElseThrow().getId();
+
+		// The first value is not a UUID; the second is UUID-shaped but 37 characters long,
+		// wider than the request_id VARCHAR(36) column. Both are invalid input and must be
+		// rejected with 400 — never left to crash the insert into a database error (500).
+		for (String requestId : new String[]{"not-a-uuid", "12345678-1234-1234-1234-1234567890123"}) {
+			mockMvc.perform(post("/players/{playerId}/wallet/credit", playerId)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(creditBody("10.00", requestId, "ADMIN", "test")))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.code").value("invalid_request_id"));
+		}
+
+		assertThat(balanceOf(playerId)).isZero();
+		assertThat(ledgerEntries.findByWalletIdOrderByIdAsc(walletId)).isEmpty();
+	}
+
+	@Test
 	void twoSequentialCreditsEachAppendOneEntryAndAddUp() throws Exception {
 		long playerId = createPlayer();
 		long walletId = wallets.findByPlayerId(playerId).orElseThrow().getId();

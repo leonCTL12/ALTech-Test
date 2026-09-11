@@ -45,7 +45,7 @@ configurations are drop-in equivalents.
 SPRING_PROFILES_ACTIVE=postgres ./mvnw test   # same suite against PostgreSQL (docker compose up first)
 ```
 
-Both runs are green: **68 tests, 0 failures**, covering the money paths, concurrency, idempotency,
+Both runs are green: **73 tests, 0 failures**, covering the money paths, concurrency, idempotency,
 refunds, history paging, schema, and OpenAPI output.
 
 ### Interactive API docs
@@ -231,7 +231,7 @@ one ledger entry and both return `200` with the current balance.
 
 ### Coverage
 
-68 tests across 13 classes: credit, debit, overdraft rejection, idempotent replay, concurrent debits,
+73 tests across 13 classes: credit, debit, overdraft rejection, idempotent replay, concurrent debits,
 concurrent identical requests, refunds (including double-refund), balance, paged history, unknown players,
 invalid inputs, schema/Flyway, JPA mapping, and OpenAPI output.
 

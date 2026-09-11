@@ -79,11 +79,20 @@ class PlayerControllerTest {
 	void nonEmptyBodyReturns400WithStructuredError() throws Exception {
 		mockMvc.perform(post("/players")
 						.contentType(MediaType.APPLICATION_JSON)
-						.content("{}"))
+						.content("{\"foo\":\"bar\"}"))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.code").value("non_empty_body"))
 				.andExpect(jsonPath("$.message").isNotEmpty())
 				.andExpect(jsonPath("$.field").value(nullValue()));
+	}
+
+	@Test
+	void emptyObjectBodyIsAcceptedAndCreatesAPlayer() throws Exception {
+		mockMvc.perform(post("/players")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{}"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.playerId").isNumber());
 	}
 
 	private long createPlayer() throws Exception {
