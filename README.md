@@ -80,7 +80,7 @@ curl -X POST http://localhost:8080/players/1/wallet/credit \
 
 curl -X POST http://localhost:8080/players/1/wallet/debit \
   -H 'Content-Type: application/json' \
-  -d '{"amount":"4.00","requestId":"c7e5a1b2-9d4e-4f6a-8c1b-2d3e4f5a6b7c",
+  -d '{"amount":"4.00","requestId":"e3f9a2b1-7c4d-4a8e-9f6b-1c2d3e4f5a6d",
        "reason":{"reasonKind":"PURCHASE","description":"Sword of +3"}}'
 # {"balance":"6.00"}
 ```
@@ -174,9 +174,10 @@ wallet stand", and the ledger answers "what did R1 do".
 
 The safety properties are **structural**, not enforced by if-checks in the service layer:
 
-- **Idempotency** — the ledger entry's `requestId` column is `UNIQUE`. Two identical requests racing cannot
-  both insert, because the database itself rejects the second. An application pre-check can never be the
-  final guard: two threads can both pass it and then race.
+- **Idempotency** — the ledger entry's `requestId` is `UNIQUE` per wallet (`wallet_id, request_id`). Two
+  identical requests for the same wallet cannot both insert, because the database itself rejects the second.
+  An application pre-check can never be the final guard: two threads can both pass it and then race. The
+  per-wallet scope also means one player's key can never swallow another player's operation.
 - **Concurrency / overdraft guard** — a debit is a single guarded update
   `UPDATE wallet SET balance = balance - :amount WHERE id = :id AND balance >= :amount`. The row is locked
   by the update, so two simultaneous debits serialize; whichever arrives second sees the post-first balance

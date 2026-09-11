@@ -44,6 +44,12 @@ class FlywaySchemaTest {
 				.contains("UQ_LEDGER_REQUEST_ID", "UQ_LEDGER_ORIGINAL_LEDGER_ENTRY_ID");
 	}
 
+	@Test
+	void ledgerRequestIdUniquenessIsScopedPerWallet() {
+		assertThat(uniqueConstraintColumnsOf("LEDGER_ENTRY", "UQ_LEDGER_REQUEST_ID"))
+				.containsExactlyInAnyOrder("WALLET_ID", "REQUEST_ID");
+	}
+
 	private Set<String> columnsOf(String table) {
 		return jdbc.queryForList(
 						"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE UPPER(TABLE_NAME) = UPPER(?)",
@@ -56,6 +62,17 @@ class FlywaySchemaTest {
 						"SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS "
 								+ "WHERE UPPER(TABLE_NAME) = UPPER(?) AND CONSTRAINT_TYPE = 'UNIQUE'",
 						String.class, table)
+				.stream().map(String::toUpperCase).collect(Collectors.toSet());
+	}
+
+	private Set<String> uniqueConstraintColumnsOf(String table, String constraintName) {
+		return jdbc.queryForList(
+						"SELECT k.COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE k "
+								+ "JOIN INFORMATION_SCHEMA.TABLE_CONSTRAINTS c "
+								+ "ON k.CONSTRAINT_NAME = c.CONSTRAINT_NAME AND k.TABLE_NAME = c.TABLE_NAME "
+								+ "WHERE UPPER(k.TABLE_NAME) = UPPER(?) AND UPPER(k.CONSTRAINT_NAME) = UPPER(?) "
+								+ "AND c.CONSTRAINT_TYPE = 'UNIQUE'",
+						String.class, table, constraintName)
 				.stream().map(String::toUpperCase).collect(Collectors.toSet());
 	}
 }

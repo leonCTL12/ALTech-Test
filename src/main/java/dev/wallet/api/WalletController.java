@@ -84,7 +84,7 @@ public class WalletController {
 			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
 	@ApiResponse(responseCode = "404", description = "No player with the given id exists (code: player_not_found)",
 			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
-	public BalanceResponse credit(@PathVariable long playerId, @RequestBody AmountRequest request) {
+	public BalanceResponse credit(@PathVariable long playerId, @RequestBody CreditRequest request) {
 		ChangeRequest change = parse(playerId, request.amount(), request.requestId(), request.reason());
 		return new BalanceResponse(walletService.credit(playerId, change.amount(), change.reason(), change.requestId()));
 	}
@@ -102,7 +102,7 @@ public class WalletController {
 			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
 	@ApiResponse(responseCode = "409", description = "The balance is not enough to cover the debit (code: insufficient_balance)",
 			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
-	public BalanceResponse debit(@PathVariable long playerId, @RequestBody AmountRequest request) {
+	public BalanceResponse debit(@PathVariable long playerId, @RequestBody DebitRequest request) {
 		ChangeRequest change = parse(playerId, request.amount(), request.requestId(), request.reason());
 		return new BalanceResponse(walletService.debit(playerId, change.amount(), change.reason(), change.requestId()));
 	}
@@ -214,10 +214,25 @@ public class WalletController {
 		require(reason.description(), "reason.description");
 	}
 
-	public record AmountRequest(
+	public record CreditRequest(
 			@Schema(description = "Amount to move, a decimal string with at most two fractional digits.", examples = {"10.00"})
 			String amount,
-			@Schema(description = "Client-supplied idempotency key; an identical requestId applies only once.", example = "b4a1f2c0-8d3e-4a5b-9c6d-0e1f2a3b4c5d")
+			@Schema(description = "Client-supplied idempotency key; an identical requestId applies only once. "
+					+ "Generate a fresh value per operation — reusing a key that a different operation already used "
+					+ "makes this request a no-op that returns the current balance.",
+					example = "b4a1f2c0-8d3e-4a5b-9c6d-0e1f2a3b4c5d")
+			String requestId,
+			@Schema(description = "Why the change happened.")
+			ReasonInput reason) {
+	}
+
+	public record DebitRequest(
+			@Schema(description = "Amount to move, a decimal string with at most two fractional digits.", examples = {"4.00"})
+			String amount,
+			@Schema(description = "Client-supplied idempotency key; an identical requestId applies only once. "
+					+ "Generate a fresh value per operation — reusing a key that a different operation already used "
+					+ "makes this request a no-op that returns the current balance.",
+					example = "e3f9a2b1-7c4d-4a8e-9f6b-1c2d3e4f5a6d")
 			String requestId,
 			@Schema(description = "Why the change happened.")
 			ReasonInput reason) {

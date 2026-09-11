@@ -38,7 +38,7 @@ public class LedgerEntry {
 	@Embedded
 	private Reason reason;
 
-	@Column(name = "request_id", length = 36, nullable = false, unique = true)
+	@Column(name = "request_id", length = 36, nullable = false)
 	private String requestId;
 
 	@Column(name = "original_ledger_entry_id", unique = true)

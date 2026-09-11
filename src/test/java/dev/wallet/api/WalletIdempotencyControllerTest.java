@@ -117,6 +117,25 @@ class WalletIdempotencyControllerTest {
 		assertThat(ledgerEntries.findByWalletIdOrderByIdAsc(walletId)).hasSize(2);
 	}
 
+	@Test
+	void theSameRequestIdOnDifferentWalletsAppliesToEachWallet() throws Exception {
+		long playerA = createPlayer();
+		long playerB = createPlayer();
+		long walletB = wallets.findByPlayerId(playerB).orElseThrow().getId();
+		String requestId = UUID.randomUUID().toString();
+
+		credit(playerA, "10.00", requestId);
+
+		mockMvc.perform(post("/players/{playerId}/wallet/credit", playerB)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(changeBody("10.00", requestId, "MISSION_REWARD", "Completed level 3")))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.balance").value("10.00"));
+
+		assertThat(balanceOf(playerB)).isEqualTo(1000L);
+		assertThat(ledgerEntries.findByWalletIdOrderByIdAsc(walletB)).hasSize(1);
+	}
+
 	private List<Integer> concurrent(String body, String url, long playerId) throws InterruptedException {
 		int threads = 2;
 		ExecutorService pool = Executors.newFixedThreadPool(threads);

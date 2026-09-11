@@ -15,7 +15,7 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, Long> 
 
 	List<LedgerEntry> findByWalletIdAndIdLessThanOrderByIdDesc(Long walletId, Long after, Pageable pageable);
 
-	Optional<LedgerEntry> findByRequestId(String requestId);
+	Optional<LedgerEntry> findByWalletIdAndRequestId(Long walletId, String requestId);
 
 	Optional<LedgerEntry> findByOriginalLedgerEntryId(Long originalLedgerEntryId);
 }

@@ -104,9 +104,28 @@ class OpenApiDocumentationTest {
 		assertThat(refund.path("properties").path("originalLedgerEntryId").path("description").isTextual())
 				.as("refund originalLedgerEntryId description").isTrue();
 
-		JsonNode amount = schemas.path("AmountRequest");
-		assertThat(amount.path("properties").path("amount").path("examples").get(0).asText())
-				.as("amount example").isEqualTo("10.00");
+		JsonNode credit = schemas.path("CreditRequest");
+		assertThat(credit.path("properties").path("amount").path("examples").get(0).asText())
+				.as("credit amount example").isEqualTo("10.00");
+		assertThat(credit.path("properties").path("requestId").path("example").isTextual())
+				.as("credit requestId example").isTrue();
+
+		JsonNode debit = schemas.path("DebitRequest");
+		assertThat(debit.path("properties").path("amount").path("examples").get(0).asText())
+				.as("debit amount example").isEqualTo("4.00");
+		assertThat(debit.path("properties").path("requestId").path("example").isTextual())
+				.as("debit requestId example").isTrue();
+
+		assertThat(credit.path("properties").path("requestId").path("example").asText())
+				.as("credit and debit requestId examples must differ: a prefilled shared key makes a later "
+						+ "operation a silent duplicate-submission no-op").isNotEqualTo(
+						debit.path("properties").path("requestId").path("example").asText());
+		assertThat(credit.path("properties").path("requestId").path("example").asText())
+				.as("credit and refund requestId examples must differ").isNotEqualTo(
+						refund.path("properties").path("requestId").path("example").asText());
+		assertThat(debit.path("properties").path("requestId").path("example").asText())
+				.as("debit and refund requestId examples must differ").isNotEqualTo(
+						refund.path("properties").path("requestId").path("example").asText());
 
 		JsonNode reason = schemas.path("ReasonInput");
 		assertThat(reason.path("properties").path("reasonKind").path("example").asText())

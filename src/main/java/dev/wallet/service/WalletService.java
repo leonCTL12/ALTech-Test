@@ -31,7 +31,7 @@ public class WalletService {
 	@Transactional
 	public String credit(long playerId, MinorUnits amount, Reason reason, String requestId) {
 		Wallet wallet = walletOrThrow(wallets.findByPlayerIdForUpdate(playerId), playerId);
-		if (alreadyApplied(requestId)) {
+		if (alreadyApplied(wallet.getId(), requestId)) {
 			return MinorUnits.format(wallet.getBalance());
 		}
 		ledgerEntries.save(new LedgerEntry(wallet, amount.value(), Direction.CREDIT, reason, requestId, null));
@@ -41,7 +41,7 @@ public class WalletService {
 	@Transactional
 	public String debit(long playerId, MinorUnits amount, Reason reason, String requestId) {
 		Wallet wallet = walletOrThrow(wallets.findByPlayerIdForUpdate(playerId), playerId);
-		if (alreadyApplied(requestId)) {
+		if (alreadyApplied(wallet.getId(), requestId)) {
 			return MinorUnits.format(wallet.getBalance());
 		}
 		if (wallets.debitIfSufficient(wallet.getId(), amount.value()) == 0) {
@@ -57,7 +57,7 @@ public class WalletService {
 	public String refund(long playerId, MinorUnits amount, Reason reason, String requestId, Long originalLedgerEntryId) {
 		Wallet wallet = walletOrThrow(wallets.findByPlayerIdForUpdate(playerId), playerId);
 
-		if (alreadyApplied(requestId)) {
+		if (alreadyApplied(wallet.getId(), requestId)) {
 			return MinorUnits.format(wallet.getBalance());
 		}
 		if (ledgerEntries.findByOriginalLedgerEntryId(originalLedgerEntryId).isPresent()) {
@@ -96,8 +96,8 @@ public class WalletService {
 	public record LedgerHistory(List<LedgerEntry> entries, Long nextAfter) {
 	}
 
-	private boolean alreadyApplied(String requestId) {
-		return ledgerEntries.findByRequestId(requestId).isPresent();
+	private boolean alreadyApplied(Long walletId, String requestId) {
+		return ledgerEntries.findByWalletIdAndRequestId(walletId, requestId).isPresent();
 	}
 
 	private Wallet walletOrThrow(Optional<Wallet> wallet, long playerId) {
