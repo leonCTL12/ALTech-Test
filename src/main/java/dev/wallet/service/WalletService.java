@@ -54,7 +54,7 @@ public class WalletService {
 	}
 
 	@Transactional
-	public String refund(long playerId, MinorUnits amount, Reason reason, String requestId, Long originalLedgerEntryId) {
+	public String refund(long playerId, Reason reason, String requestId, Long originalLedgerEntryId) {
 		Wallet wallet = walletOrThrow(wallets.findByPlayerIdForUpdate(playerId), playerId);
 
 		if (alreadyApplied(wallet.getId(), requestId)) {
@@ -72,8 +72,9 @@ public class WalletService {
 					"Ledger entry " + originalLedgerEntryId + " is not a debit.");
 		}
 
-		ledgerEntries.save(new LedgerEntry(wallet, amount.value(), Direction.CREDIT, reason, requestId, originalLedgerEntryId));
-		return MinorUnits.format(wallet.credit(amount.value()));
+		long refundAmount = originalEntry.getAmount();
+		ledgerEntries.save(new LedgerEntry(wallet, refundAmount, Direction.CREDIT, reason, requestId, originalLedgerEntryId));
+		return MinorUnits.format(wallet.credit(refundAmount));
 	}
 
 	public String getBalance(long playerId) {

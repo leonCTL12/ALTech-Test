@@ -53,7 +53,7 @@ class WalletRefundControllerTest {
 
 		mockMvc.perform(post("/players/{playerId}/wallet/refund", playerId)
 						.contentType(MediaType.APPLICATION_JSON)
-						.content(refundBody("4.00", UUID.randomUUID().toString(), debitId)))
+						.content(refundBody(UUID.randomUUID().toString(), debitId)))
 				.andExpect(status().isOk())
 				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 				.andExpect(jsonPath("$.balance").value("10.00"));
@@ -76,12 +76,12 @@ class WalletRefundControllerTest {
 		credit(playerId, "10.00");
 		long debitId = debit(playerId, "4.00");
 
-		refund(playerId, "4.00", debitId, UUID.randomUUID().toString());
+		refund(playerId, debitId, UUID.randomUUID().toString());
 		assertThat(balanceOf(playerId)).isEqualTo(1000L);
 
 		mockMvc.perform(post("/players/{playerId}/wallet/refund", playerId)
 						.contentType(MediaType.APPLICATION_JSON)
-						.content(refundBody("4.00", UUID.randomUUID().toString(), debitId)))
+						.content(refundBody(UUID.randomUUID().toString(), debitId)))
 				.andExpect(status().isConflict())
 				.andExpect(jsonPath("$.code").value("already_refunded"));
 
@@ -90,20 +90,25 @@ class WalletRefundControllerTest {
 	}
 
 	@Test
-	void refundLargerThanCurrentBalanceSucceedsWithoutOverdraftGuard() throws Exception {
+	void aClientSuppliedAmountIsIgnoredAndTheRefundRestoresExactlyTheDebitAmount() throws Exception {
 		long playerId = createPlayer();
 		long walletId = wallets.findByPlayerId(playerId).orElseThrow().getId();
 		credit(playerId, "10.00");
-		long debitId = debit(playerId, "5.00");
+		long debitId = debit(playerId, "4.00");
 
 		mockMvc.perform(post("/players/{playerId}/wallet/refund", playerId)
 						.contentType(MediaType.APPLICATION_JSON)
-						.content(refundBody("10.00", UUID.randomUUID().toString(), debitId)))
+						.content(refundBodyWithAmount("999.00", UUID.randomUUID().toString(), debitId)))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.balance").value("15.00"));
+				.andExpect(jsonPath("$.balance").value("10.00"));
 
-		assertThat(balanceOf(playerId)).isEqualTo(1500L);
-		assertThat(ledgerEntries.findByWalletIdOrderByIdAsc(walletId)).hasSize(3);
+		assertThat(balanceOf(playerId)).isEqualTo(1000L);
+		List<LedgerEntry> entries = ledgerEntries.findByWalletIdOrderByIdAsc(walletId);
+		assertThat(entries).hasSize(3);
+		LedgerEntry refund = entries.get(2);
+		assertThat(refund.getDirection()).isEqualTo(Direction.CREDIT);
+		assertThat(refund.getAmount()).isEqualTo(400L);
+		assertThat(refund.getOriginalLedgerEntryId()).isEqualTo(debitId);
 	}
 
 	@Test
@@ -114,12 +119,12 @@ class WalletRefundControllerTest {
 		long debitId = debit(playerId, "4.00");
 		String requestId = UUID.randomUUID().toString();
 
-		refund(playerId, "4.00", debitId, requestId);
+		refund(playerId, debitId, requestId);
 		assertThat(balanceOf(playerId)).isEqualTo(1000L);
 
 		mockMvc.perform(post("/players/{playerId}/wallet/refund", playerId)
 						.contentType(MediaType.APPLICATION_JSON)
-						.content(refundBody("4.00", requestId, debitId)))
+						.content(refundBody(requestId, debitId)))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.balance").value("10.00"));
 
@@ -131,7 +136,7 @@ class WalletRefundControllerTest {
 	void refundForUnknownPlayerReturns404() throws Exception {
 		mockMvc.perform(post("/players/{playerId}/wallet/refund", 999_999L)
 						.contentType(MediaType.APPLICATION_JSON)
-						.content(refundBody("4.00", UUID.randomUUID().toString(), 1L)))
+						.content(refundBody(UUID.randomUUID().toString(), 1L)))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.code").value("player_not_found"));
 	}
@@ -143,7 +148,7 @@ class WalletRefundControllerTest {
 
 		mockMvc.perform(post("/players/{playerId}/wallet/refund", playerId)
 						.contentType(MediaType.APPLICATION_JSON)
-						.content(refundBody("4.00", UUID.randomUUID().toString(), 999_999L)))
+						.content(refundBody(UUID.randomUUID().toString(), 999_999L)))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.code").value("debit_not_found"));
 	}
@@ -156,7 +161,6 @@ class WalletRefundControllerTest {
 		mockMvc.perform(post("/players/{playerId}/wallet/refund", playerId)
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("{"
-								+ "\"amount\":\"4.00\","
 								+ "\"requestId\":\"" + UUID.randomUUID() + "\","
 								+ "\"reason\":{\"reasonKind\":\"REFUND\",\"description\":\"test\"}"
 								+ "}"))
@@ -183,7 +187,7 @@ class WalletRefundControllerTest {
 					barrier.await(10, TimeUnit.SECONDS);
 					int status = mockMvc.perform(post("/players/{playerId}/wallet/refund", playerId)
 									.contentType(MediaType.APPLICATION_JSON)
-									.content(refundBody("4.00", UUID.randomUUID().toString(), debitId)))
+									.content(refundBody(UUID.randomUUID().toString(), debitId)))
 							.andReturn().getResponse().getStatus();
 					statuses.add(status);
 				} catch (Exception e) {
@@ -216,10 +220,10 @@ class WalletRefundControllerTest {
 				.findFirst().orElseThrow();
 	}
 
-	private void refund(long playerId, String amount, long debitId, String requestId) throws Exception {
+	private void refund(long playerId, long debitId, String requestId) throws Exception {
 		mockMvc.perform(post("/players/{playerId}/wallet/refund", playerId)
 						.contentType(MediaType.APPLICATION_JSON)
-						.content(refundBody(amount, requestId, debitId)))
+						.content(refundBody(requestId, debitId)))
 				.andExpect(status().isOk());
 	}
 
@@ -234,7 +238,15 @@ class WalletRefundControllerTest {
 		return wallets.findByPlayerId(playerId).orElseThrow().getBalance();
 	}
 
-	private String refundBody(String amount, String requestId, long debitId) {
+	private String refundBody(String requestId, long debitId) {
+		return "{"
+				+ "\"requestId\":\"" + requestId + "\","
+				+ "\"reason\":{\"reasonKind\":\"REFUND\",\"description\":\"Refund of purchase\"},"
+				+ "\"originalLedgerEntryId\":" + debitId
+				+ "}";
+	}
+
+	private String refundBodyWithAmount(String amount, String requestId, long debitId) {
 		return "{"
 				+ "\"amount\":\"" + amount + "\","
 				+ "\"requestId\":\"" + requestId + "\","

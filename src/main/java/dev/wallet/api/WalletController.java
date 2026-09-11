@@ -109,22 +109,26 @@ public class WalletController {
 
 	@PostMapping("/refund")
 	@Operation(summary = "Refund a prior debit",
-			description = "Credits the wallet to reverse a prior debit, referencing the original debit's ledger entry. "
+			description = "Credits the wallet to reverse a prior debit, restoring exactly the amount of the original "
+					+ "debit's ledger entry and appending a new credit entry that references it. "
 					+ "A refund is never subject to the overdraft guard, and a debit can be refunded only once. "
 					+ "Retrying with the same requestId applies the refund only once.")
 	@ApiResponse(responseCode = "200", description = "The balance after the refund",
 			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = BalanceResponse.class)))
-	@ApiResponse(responseCode = "400", description = "A field is missing or invalid (codes: missing_field, invalid_amount, invalid_original_ledger_entry_id, malformed_body)",
+	@ApiResponse(responseCode = "400", description = "A field is missing or invalid (codes: missing_field, invalid_original_ledger_entry_id, malformed_body)",
 			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
 	@ApiResponse(responseCode = "404", description = "The player or the original debit does not exist (codes: player_not_found, debit_not_found)",
 			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
 	@ApiResponse(responseCode = "409", description = "The original debit has already been refunded (code: already_refunded)",
 			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
 	public BalanceResponse refund(@PathVariable long playerId, @RequestBody RefundRequest request) {
-		ChangeRequest change = parse(playerId, request.amount(), request.requestId(), request.reason());
+		requirePlayerId(playerId);
+		require(request.requestId(), "requestId");
+		requireReason(request.reason());
 		requireOriginalLedgerEntryId(request.originalLedgerEntryId());
-		return new BalanceResponse(walletService.refund(playerId, change.amount(), change.reason(),
-				change.requestId(), request.originalLedgerEntryId()));
+		Reason reason = new Reason(request.reason().kind(), request.reason().description());
+		return new BalanceResponse(walletService.refund(playerId, reason,
+				request.requestId().trim(), request.originalLedgerEntryId()));
 	}
 
 	private void requireOriginalLedgerEntryId(Long originalLedgerEntryId) {
@@ -239,13 +243,12 @@ public class WalletController {
 	}
 
 	public record RefundRequest(
-			@Schema(description = "Amount to refund, a decimal string with at most two fractional digits.", examples = {"10.00"})
-			String amount,
 			@Schema(description = "Client-supplied idempotency key; an identical requestId applies only once.", example = "c7e5a1b2-9d4e-4f6a-8c1b-2d3e4f5a6b7c")
 			String requestId,
 			@Schema(description = "Why the refund happened.")
 			ReasonInput reason,
-			@Schema(description = "Ledger entry id of the original debit being refunded.", example = "42")
+			@Schema(description = "Ledger entry id of the original debit being refunded; the refund restores exactly that "
+					+ "debit's amount, which the client cannot choose.", example = "42")
 			Long originalLedgerEntryId) {
 	}
 

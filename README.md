@@ -45,7 +45,7 @@ configurations are drop-in equivalents.
 SPRING_PROFILES_ACTIVE=postgres ./mvnw test   # same suite against PostgreSQL (docker compose up first)
 ```
 
-Both runs are green: **66 tests, 0 failures**, covering the money paths, concurrency, idempotency,
+Both runs are green: **68 tests, 0 failures**, covering the money paths, concurrency, idempotency,
 refunds, history paging, schema, and OpenAPI output.
 
 ### Interactive API docs
@@ -83,6 +83,15 @@ curl -X POST http://localhost:8080/players/1/wallet/debit \
   -d '{"amount":"4.00","requestId":"e3f9a2b1-7c4d-4a8e-9f6b-1c2d3e4f5a6d",
        "reason":{"reasonKind":"PURCHASE","description":"Sword of +3"}}'
 # {"balance":"6.00"}
+
+# Refund reverses a debit by its ledger entry id — the amount is always the debit's exact amount,
+# so no amount is accepted here.
+curl -X POST http://localhost:8080/players/1/wallet/refund \
+  -H 'Content-Type: application/json' \
+  -d '{"requestId":"c7e5a1b2-9d4e-4f6a-8c1b-2d3e4f5a6b7c",
+       "reason":{"reasonKind":"REFUND","description":"Refund of purchase"},
+       "originalLedgerEntryId":2}'
+# {"balance":"10.00"}
 ```
 
 ---
@@ -125,7 +134,8 @@ permanently self-contained.
 ### Supporting decisions
 
 - **A refund is a new credit that reverses a prior debit** — it never touches the original entry (the
-  ledger is immutable) and is **never subject to the overdraft guard**; a debit can be refunded only once.
+  ledger is immutable), restores **exactly the original debit's amount** (the client cannot choose it), and is
+  **never subject to the overdraft guard**; a debit can be refunded only once.
   [`docs/adr/0004-refund-semantics.md`](docs/adr/0004-refund-semantics.md)
 - **A player and its wallet are created together** by `POST /players` — no lazy wallet creation, so the
   first money movement can never race a wallet into existence.
@@ -221,7 +231,7 @@ one ledger entry and both return `200` with the current balance.
 
 ### Coverage
 
-66 tests across 13 classes: credit, debit, overdraft rejection, idempotent replay, concurrent debits,
+68 tests across 13 classes: credit, debit, overdraft rejection, idempotent replay, concurrent debits,
 concurrent identical requests, refunds (including double-refund), balance, paged history, unknown players,
 invalid inputs, schema/Flyway, JPA mapping, and OpenAPI output.
 
@@ -242,8 +252,8 @@ invalid inputs, schema/Flyway, JPA mapping, and OpenAPI output.
 
 - **The default H2 profile is in-memory** — data is lost on restart. Use the PostgreSQL profile
   (`docker compose up -d`) for persistence.
-- **A debit can be refunded only once.** Full or partial repeated refunds are out of scope; a second refund
-  of the same debit is rejected (`409`).
+- **A debit can be refunded only once, and only in full.** A refund always restores the original debit's
+  exact amount — partial refunds are out of scope; a second refund of the same debit is rejected (`409`).
 - **No balance reconciliation today.** Nothing verifies that a wallet's balance still equals the sum of its
   history (see the single-entry trade-off in §2). This is the natural first future improvement.
 

@@ -65,7 +65,7 @@ with PostgreSQL as a drop-in profile.
   transaction; returns the generated `playerId`. No Idempotency Key: it is not a money movement.
 - `POST /players/{playerId}/wallet/credit` — body: `{ amount, requestId, reason }`
 - `POST /players/{playerId}/wallet/debit` — body: `{ amount, requestId, reason }`
-- `POST /players/{playerId}/wallet/refund` — body: `{ amount, requestId, reason, originalLedgerEntryId }`
+- `POST /players/{playerId}/wallet/refund` — body: `{ requestId, reason, originalLedgerEntryId }`
 - `GET /players/{playerId}/wallet` — returns current Balance
 - `GET /players/{playerId}/wallet/transactions?after=<entryId>&limit=<n>` — cursor-paginated history,
   newest first
@@ -97,7 +97,11 @@ with PostgreSQL as a drop-in profile.
 - **One Refund per Debit** (ADR-0004): the Refund records the original Debit's Ledger Entry id; a second
   Refund of the same Debit is rejected (409). Enforced by a UNIQUE constraint on the refund's
   `originalLedgerEntryId` plus an application check.
-- A Refund is a **Credit**: it always succeeds and is never subject to the Overdraft Guard.
+- **A Refund restores exactly the original Debit's amount** — the client names the Debit to undo
+  (`originalLedgerEntryId`), never an amount. The Refund's amount is read from the original entry, so it
+  can neither over- nor under-credit.
+- A Refund is a **Credit**: it always succeeds and is never subject to the Overdraft Guard. Because the
+  refunded Debit already succeeded (the balance covered it), the refund can never make the balance negative.
 
 ### Player & wallet lifecycle
 
