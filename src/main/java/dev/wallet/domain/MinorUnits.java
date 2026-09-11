@@ -39,6 +39,10 @@ public record MinorUnits(long value) {
 	}
 
 	public String toDecimalString() {
-		return String.format(Locale.ROOT, "%d.%02d", value / 100, value % 100);
+		return format(value);
+	}
+
+	public static String format(long minorUnits) {
+		return String.format(Locale.ROOT, "%d.%02d", minorUnits / 100, minorUnits % 100);
 	}
 }

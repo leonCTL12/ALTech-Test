@@ -51,4 +51,9 @@ public class Wallet {
 	public int getVersion() {
 		return version;
 	}
+
+	public long credit(long amount) {
+		this.balance += amount;
+		return balance;
+	}
 }
