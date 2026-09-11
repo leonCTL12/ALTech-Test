@@ -6,7 +6,18 @@
 
 **Status:** ready-for-agent
 
-- [ ] A `@DataJpaTest` saves and reads back a Player
-- [ ] A Wallet saves and reads back with its Player relationship
-- [ ] A Ledger Entry saves and reads back with its Wallet relationship, including the Reason fields
-- [ ] Inserting two Ledger Entries with the same `request_id` throws a unique-constraint exception
+- [x] A `@DataJpaTest` saves and reads back a Player
+- [x] A Wallet saves and reads back with its Player relationship
+- [x] A Ledger Entry saves and reads back with its Wallet relationship, including the Reason fields
+- [x] Inserting two Ledger Entries with the same `request_id` throws a unique-constraint exception
+
+## Comments
+
+- Implemented `dev.wallet.domain` entities (`Player`, `Wallet`, `LedgerEntry`, `Direction`,
+  `ReasonKind`, `Reason` as an `@Embeddable`) and `dev.wallet.repository` Spring Data interfaces.
+  `Reason` is embedded as `reason_kind` / `description` / `reference_id`. `created_at` is set by
+  `@PrePersist` when not supplied. `wallet.version` is mapped as a plain column (optimistic locking
+  via `@Version` deferred to the concurrent-debit decision in ticket 11).
+- `@DataJpaTest` runs the Flyway migration against embedded H2; the duplicate `request_id` test
+  asserts `DataIntegrityViolationException` from the DB unique constraint.
+- Tests: `src/test/java/dev/wallet/repository/JpaMappingTest.java` (4 tests, green).
