@@ -1,8 +1,8 @@
-# 13: README with the five required sections
+# 14: README with the five required sections
 
 **What to build:** the reviewer-facing README with the five required sections: how to run the project and tests; design decisions (single-entry ledger with materialized Balance, Money as Minor Units, USD-only, reason embedded in LedgerEntry rather than its own table — see ADR-0006); how concurrency and Idempotency are handled (Overdraft Guard conditional update, UNIQUE constraint on the Idempotency Key, atomic transaction); the testing approach, especially the concurrent debit case; and assumptions and limitations (players created in-service rather than external identity, no multi-currency/FX, no auth).
 
-**Blocked by:** 12 OpenAPI/Swagger documentation
+**Blocked by:** 13 PostgreSQL profile (optional)
 
 **Status:** ready-for-agent
 

@@ -1,8 +1,8 @@
-# 14: PostgreSQL profile (optional)
+# 13: PostgreSQL profile (optional)
 
 **What to build:** a `postgres` Spring profile pointing at a local PostgreSQL instance plus an optional Docker Compose file, running the same Flyway SQL. The H2 tests must also pass against PostgreSQL, proving the schema is portable.
 
-**Blocked by:** 13 README with the five required sections
+**Blocked by:** 12 OpenAPI/Swagger documentation
 
 **Status:** ready-for-agent
 
