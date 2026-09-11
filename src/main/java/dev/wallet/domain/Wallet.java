@@ -56,4 +56,9 @@ public class Wallet {
 		this.balance += amount;
 		return balance;
 	}
+
+	public long debit(long amount) {
+		this.balance -= amount;
+		return balance;
+	}
 }

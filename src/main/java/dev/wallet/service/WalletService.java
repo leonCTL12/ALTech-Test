@@ -32,6 +32,18 @@ public class WalletService {
 		return MinorUnits.format(wallet.credit(amount.value()));
 	}
 
+	@Transactional
+	public String debit(long playerId, MinorUnits amount, Reason reason, String requestId) {
+		Wallet wallet = walletOrThrow(wallets.findByPlayerIdForUpdate(playerId), playerId);
+		if (wallets.debitIfSufficient(wallet.getId(), amount.value()) == 0) {
+			throw new ApiException(HttpStatus.CONFLICT, "insufficient_balance",
+					"The balance of " + MinorUnits.format(wallet.getBalance())
+							+ " is not enough to debit " + amount.toDecimalString() + ".");
+		}
+		ledgerEntries.save(new LedgerEntry(wallet, amount.value(), Direction.DEBIT, reason, requestId, null));
+		return MinorUnits.format(wallet.debit(amount.value()));
+	}
+
 	public String getBalance(long playerId) {
 		Wallet wallet = walletOrThrow(wallets.findByPlayerId(playerId), playerId);
 		return MinorUnits.format(wallet.getBalance());

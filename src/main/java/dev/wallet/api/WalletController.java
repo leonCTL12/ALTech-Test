@@ -31,7 +31,18 @@ public class WalletController {
 	}
 
 	@PostMapping("/credit")
-	public CreditResponse credit(@PathVariable long playerId, @RequestBody CreditRequest request) {
+	public BalanceResponse credit(@PathVariable long playerId, @RequestBody AmountRequest request) {
+		ChangeRequest change = parse(playerId, request);
+		return new BalanceResponse(walletService.credit(playerId, change.amount(), change.reason(), change.requestId()));
+	}
+
+	@PostMapping("/debit")
+	public BalanceResponse debit(@PathVariable long playerId, @RequestBody AmountRequest request) {
+		ChangeRequest change = parse(playerId, request);
+		return new BalanceResponse(walletService.debit(playerId, change.amount(), change.reason(), change.requestId()));
+	}
+
+	private ChangeRequest parse(long playerId, AmountRequest request) {
 		requirePlayerId(playerId);
 		require(request.amount(), "amount");
 		require(request.requestId(), "requestId");
@@ -39,7 +50,10 @@ public class WalletController {
 		MinorUnits amount = toMinorUnits(request.amount());
 		Reason reason = new Reason(request.reason().kind(), request.reason().description(),
 				request.reason().referenceId());
-		return new CreditResponse(walletService.credit(playerId, amount, reason, request.requestId().trim()));
+		return new ChangeRequest(amount, reason, request.requestId().trim());
+	}
+
+	private record ChangeRequest(MinorUnits amount, Reason reason, String requestId) {
 	}
 
 	private MinorUnits toMinorUnits(String decimal) {
@@ -76,13 +90,10 @@ public class WalletController {
 		require(reason.description(), "reason.description");
 	}
 
-	public record CreditRequest(String amount, String requestId, ReasonInput reason) {
+	public record AmountRequest(String amount, String requestId, ReasonInput reason) {
 	}
 
 	public record ReasonInput(@JsonProperty("reasonKind") ReasonKind kind, String description, Long referenceId) {
-	}
-
-	public record CreditResponse(String balance) {
 	}
 
 	public record BalanceResponse(String balance) {
