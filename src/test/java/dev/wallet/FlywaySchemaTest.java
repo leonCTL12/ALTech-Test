@@ -30,7 +30,7 @@ class FlywaySchemaTest {
 		assertThat(columnsOf("WALLET")).containsExactlyInAnyOrder("ID", "PLAYER_ID", "BALANCE", "VERSION");
 		assertThat(columnsOf("LEDGER_ENTRY")).containsExactlyInAnyOrder(
 				"ID", "WALLET_ID", "AMOUNT", "DIRECTION", "REASON_KIND",
-				"DESCRIPTION", "REQUEST_ID", "ORIGINAL_DEBIT_ID", "CREATED_AT");
+				"DESCRIPTION", "REQUEST_ID", "ORIGINAL_LEDGER_ENTRY_ID", "CREATED_AT");
 	}
 
 	@Test
@@ -39,9 +39,9 @@ class FlywaySchemaTest {
 	}
 
 	@Test
-	void ledgerEntryHasUniqueConstraintsOnRequestIdAndOriginalDebitId() {
+	void ledgerEntryHasUniqueConstraintsOnRequestIdAndOriginalLedgerEntryId() {
 		assertThat(uniqueConstraintsOf("LEDGER_ENTRY"))
-				.contains("UQ_LEDGER_REQUEST_ID", "UQ_LEDGER_ORIGINAL_DEBIT_ID");
+				.contains("UQ_LEDGER_REQUEST_ID", "UQ_LEDGER_ORIGINAL_LEDGER_ENTRY_ID");
 	}
 
 	private Set<String> columnsOf(String table) {

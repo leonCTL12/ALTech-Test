@@ -54,25 +54,25 @@ public class WalletService {
 	}
 
 	@Transactional
-	public String refund(long playerId, MinorUnits amount, Reason reason, String requestId, Long originalDebitId) {
+	public String refund(long playerId, MinorUnits amount, Reason reason, String requestId, Long originalLedgerEntryId) {
 		Wallet wallet = walletOrThrow(wallets.findByPlayerIdForUpdate(playerId), playerId);
 
 		if (alreadyApplied(requestId)) {
 			return MinorUnits.format(wallet.getBalance());
 		}
-		if (ledgerEntries.findByOriginalDebitId(originalDebitId).isPresent()) {
+		if (ledgerEntries.findByOriginalLedgerEntryId(originalLedgerEntryId).isPresent()) {
 			throw new ApiException(HttpStatus.CONFLICT, "already_refunded",
-					"The debit with id " + originalDebitId + " has already been refunded.");
+					"The debit with id " + originalLedgerEntryId + " has already been refunded.");
 		}
-		LedgerEntry originalDebit = ledgerEntries.findById(originalDebitId).orElseThrow(() ->
+		LedgerEntry originalEntry = ledgerEntries.findById(originalLedgerEntryId).orElseThrow(() ->
 				new ApiException(HttpStatus.NOT_FOUND, "debit_not_found",
-						"No debit with id " + originalDebitId + " exists."));
-		if (originalDebit.getDirection() != Direction.DEBIT) {
+						"No debit with id " + originalLedgerEntryId + " exists."));
+		if (originalEntry.getDirection() != Direction.DEBIT) {
 			throw new ApiException(HttpStatus.NOT_FOUND, "debit_not_found",
-					"Ledger entry " + originalDebitId + " is not a debit.");
+					"Ledger entry " + originalLedgerEntryId + " is not a debit.");
 		}
 
-		ledgerEntries.save(new LedgerEntry(wallet, amount.value(), Direction.CREDIT, reason, requestId, originalDebitId));
+		ledgerEntries.save(new LedgerEntry(wallet, amount.value(), Direction.CREDIT, reason, requestId, originalLedgerEntryId));
 		return MinorUnits.format(wallet.credit(amount.value()));
 	}
 

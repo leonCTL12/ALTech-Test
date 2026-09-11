@@ -65,7 +65,7 @@ class WalletRefundControllerTest {
 		LedgerEntry refund = entries.get(2);
 		assertThat(refund.getDirection()).isEqualTo(Direction.CREDIT);
 		assertThat(refund.getAmount()).isEqualTo(400L);
-		assertThat(refund.getOriginalDebitId()).isEqualTo(debitId);
+		assertThat(refund.getOriginalLedgerEntryId()).isEqualTo(debitId);
 		assertThat(refund.getReason().getKind()).isEqualTo(ReasonKind.REFUND);
 	}
 
@@ -201,7 +201,7 @@ class WalletRefundControllerTest {
 		assertThat(balanceOf(playerId)).isEqualTo(1000L);
 		List<LedgerEntry> entries = ledgerEntries.findByWalletIdOrderByIdAsc(walletId);
 		assertThat(entries).hasSize(3);
-		assertThat(entries.stream().filter(e -> e.getOriginalDebitId() != null)).hasSize(1);
+		assertThat(entries.stream().filter(e -> e.getOriginalLedgerEntryId() != null)).hasSize(1);
 	}
 
 	private long debit(long playerId, String amount) throws Exception {
@@ -239,7 +239,7 @@ class WalletRefundControllerTest {
 				+ "\"amount\":\"" + amount + "\","
 				+ "\"requestId\":\"" + requestId + "\","
 				+ "\"reason\":{\"reasonKind\":\"REFUND\",\"description\":\"Refund of purchase\"},"
-				+ "\"originalDebitId\":" + debitId
+				+ "\"originalLedgerEntryId\":" + debitId
 				+ "}";
 	}
 

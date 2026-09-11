@@ -65,7 +65,7 @@ with PostgreSQL as a drop-in profile.
   transaction; returns the generated `playerId`. No Idempotency Key: it is not a money movement.
 - `POST /players/{playerId}/wallet/credit` — body: `{ amount, requestId, reason }`
 - `POST /players/{playerId}/wallet/debit` — body: `{ amount, requestId, reason }`
-- `POST /players/{playerId}/wallet/refund` — body: `{ amount, requestId, reason, originalDebitId }`
+- `POST /players/{playerId}/wallet/refund` — body: `{ amount, requestId, reason, originalLedgerEntryId }`
 - `GET /players/{playerId}/wallet` — returns current Balance
 - `GET /players/{playerId}/wallet/transactions?after=<entryId>&limit=<n>` — cursor-paginated history,
   newest first
@@ -74,7 +74,7 @@ with PostgreSQL as a drop-in profile.
 - `requestId` is a client-supplied UUID (the Idempotency Key).
 - `reason` is structured: a `reasonKind` enum (`MISSION_REWARD`, `PURCHASE`, `ADMIN`, `REFUND`) and a
   human `description`. A Refund's ReasonKind is `REFUND`; the link back to the original Debit's Ledger Entry
-  id is carried by `originalDebitId`, not by the reason.
+  id is carried by `originalLedgerEntryId`, not by the reason.
 
 ### Idempotency & concurrency
 
@@ -96,7 +96,7 @@ with PostgreSQL as a drop-in profile.
 
 - **One Refund per Debit** (ADR-0004): the Refund records the original Debit's Ledger Entry id; a second
   Refund of the same Debit is rejected (409). Enforced by a UNIQUE constraint on the refund's
-  `originalDebitId` plus an application check.
+  `originalLedgerEntryId` plus an application check.
 - A Refund is a **Credit**: it always succeeds and is never subject to the Overdraft Guard.
 
 ### Player & wallet lifecycle
@@ -122,7 +122,7 @@ with PostgreSQL as a drop-in profile.
   (ADR not needed — same SQL).
 - Schema: `player` (id), `wallet` (id, player_id, balance, version), `ledger_entry`
   (id, wallet_id, amount, direction, reason_kind, description, request_id UNIQUE,
-  original_debit_id UNIQUE NULL, created_at).
+  original_ledger_entry_id UNIQUE NULL, created_at).
 
 ### Observability & docs
 

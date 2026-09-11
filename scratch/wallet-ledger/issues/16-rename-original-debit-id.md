@@ -6,17 +6,17 @@ controller endpoints, service methods, tests, OpenAPI docs, and issue tracker re
 
 **Blocked by:** none
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Rename request field `originalDebitId` → `originalLedgerEntryId` in `RefundRequest`
-- [ ] Rename response field (if exposed) accordingly
-- [ ] Update `LedgerEntry.originalDebitId` → `LedgerEntry.originalLedgerEntryId`
-- [ ] Rename repository method `findByOriginalDebitId(…)` → `findByOriginalLedgerEntryId(…)`
-- [ ] Rename DB column `original_debit_id` → `original_ledger_entry_id` in `V1__create_schema.sql`
-- [ ] Rename service parameter `originalDebitId` in `WalletService.refund(…)`
-- [ ] Update all test assertions that use `originalDebitId` as field or variable name
-- [ ] Update `@ApiResponse` descriptions referencing `originalDebitId` in OpenAPI annotations
-- [ ] Run full test suite to confirm nothing breaks
+- [x] Rename request field `originalDebitId` → `originalLedgerEntryId` in `RefundRequest`
+- [x] Rename response field (if exposed) accordingly
+- [x] Update `LedgerEntry.originalDebitId` → `LedgerEntry.originalLedgerEntryId`
+- [x] Rename repository method `findByOriginalDebitId(…)` → `findByOriginalLedgerEntryId(…)`
+- [x] Rename DB column `original_debit_id` → `original_ledger_entry_id` in `V1__create_schema.sql`
+- [x] Rename service parameter `originalDebitId` in `WalletService.refund(…)`
+- [x] Update all test assertions that use `originalDebitId` as field or variable name
+- [x] Update `@ApiResponse` descriptions referencing `originalDebitId` in OpenAPI annotations
+- [x] Run full test suite to confirm nothing breaks
 
 ## Why rename
 

@@ -41,20 +41,20 @@ public class LedgerEntry {
 	@Column(name = "request_id", length = 36, nullable = false, unique = true)
 	private String requestId;
 
-	@Column(name = "original_debit_id", unique = true)
-	private Long originalDebitId;
+	@Column(name = "original_ledger_entry_id", unique = true)
+	private Long originalLedgerEntryId;
 
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;
 
 	public LedgerEntry(Wallet wallet, long amount, Direction direction, Reason reason,
-			String requestId, Long originalDebitId) {
+			String requestId, Long originalLedgerEntryId) {
 		this.wallet = wallet;
 		this.amount = amount;
 		this.direction = direction;
 		this.reason = reason;
 		this.requestId = requestId;
-		this.originalDebitId = originalDebitId;
+		this.originalLedgerEntryId = originalLedgerEntryId;
 	}
 
 	protected LedgerEntry() {
@@ -91,8 +91,8 @@ public class LedgerEntry {
 		return requestId;
 	}
 
-	public Long getOriginalDebitId() {
-		return originalDebitId;
+	public Long getOriginalLedgerEntryId() {
+		return originalLedgerEntryId;
 	}
 
 	public Instant getCreatedAt() {

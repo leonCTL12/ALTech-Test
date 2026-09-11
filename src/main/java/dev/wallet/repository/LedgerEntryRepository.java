@@ -17,5 +17,5 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, Long> 
 
 	Optional<LedgerEntry> findByRequestId(String requestId);
 
-	Optional<LedgerEntry> findByOriginalDebitId(Long originalDebitId);
+	Optional<LedgerEntry> findByOriginalLedgerEntryId(Long originalLedgerEntryId);
 }

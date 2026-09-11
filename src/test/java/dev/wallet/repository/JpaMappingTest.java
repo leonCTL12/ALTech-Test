@@ -63,7 +63,7 @@ class JpaMappingTest {
 		assertThat(found.getReason().getKind()).isEqualTo(ReasonKind.MISSION_REWARD);
 		assertThat(found.getReason().getDescription()).isEqualTo("Completed level 3");
 		assertThat(found.getRequestId()).isEqualTo(requestId);
-		assertThat(found.getOriginalDebitId()).isNull();
+		assertThat(found.getOriginalLedgerEntryId()).isNull();
 		assertThat(found.getCreatedAt()).isNotNull();
 	}
 

@@ -101,8 +101,8 @@ class OpenApiDocumentationTest {
 		JsonNode refund = schemas.path("RefundRequest");
 		assertThat(refund.path("properties").path("amount").path("examples").get(0).asText())
 				.as("refund amount example").isEqualTo("10.00");
-		assertThat(refund.path("properties").path("originalDebitId").path("description").isTextual())
-				.as("refund originalDebitId description").isTrue();
+		assertThat(refund.path("properties").path("originalLedgerEntryId").path("description").isTextual())
+				.as("refund originalLedgerEntryId description").isTrue();
 
 		JsonNode amount = schemas.path("AmountRequest");
 		assertThat(amount.path("properties").path("amount").path("examples").get(0).asText())

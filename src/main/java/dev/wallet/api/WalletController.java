@@ -114,7 +114,7 @@ public class WalletController {
 					+ "Retrying with the same requestId applies the refund only once.")
 	@ApiResponse(responseCode = "200", description = "The balance after the refund",
 			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = BalanceResponse.class)))
-	@ApiResponse(responseCode = "400", description = "A field is missing or invalid (codes: missing_field, invalid_amount, invalid_original_debit_id, malformed_body)",
+	@ApiResponse(responseCode = "400", description = "A field is missing or invalid (codes: missing_field, invalid_amount, invalid_original_ledger_entry_id, malformed_body)",
 			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
 	@ApiResponse(responseCode = "404", description = "The player or the original debit does not exist (codes: player_not_found, debit_not_found)",
 			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
@@ -122,19 +122,19 @@ public class WalletController {
 			content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
 	public BalanceResponse refund(@PathVariable long playerId, @RequestBody RefundRequest request) {
 		ChangeRequest change = parse(playerId, request.amount(), request.requestId(), request.reason());
-		requireOriginalDebitId(request.originalDebitId());
+		requireOriginalLedgerEntryId(request.originalLedgerEntryId());
 		return new BalanceResponse(walletService.refund(playerId, change.amount(), change.reason(),
-				change.requestId(), request.originalDebitId()));
+				change.requestId(), request.originalLedgerEntryId()));
 	}
 
-	private void requireOriginalDebitId(Long originalDebitId) {
-		if (originalDebitId == null) {
+	private void requireOriginalLedgerEntryId(Long originalLedgerEntryId) {
+		if (originalLedgerEntryId == null) {
 			throw new ApiException(HttpStatus.BAD_REQUEST, "missing_field",
-					"The field 'originalDebitId' is required.", "originalDebitId");
+					"The field 'originalLedgerEntryId' is required.", "originalLedgerEntryId");
 		}
-		if (originalDebitId <= 0) {
-			throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_original_debit_id",
-					"originalDebitId must be a positive whole number.", "originalDebitId");
+		if (originalLedgerEntryId <= 0) {
+			throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_original_ledger_entry_id",
+					"originalLedgerEntryId must be a positive whole number.", "originalLedgerEntryId");
 		}
 	}
 
@@ -231,7 +231,7 @@ public class WalletController {
 			@Schema(description = "Why the refund happened.")
 			ReasonInput reason,
 			@Schema(description = "Ledger entry id of the original debit being refunded.", example = "42")
-			Long originalDebitId) {
+			Long originalLedgerEntryId) {
 	}
 
 	public record ReasonInput(
